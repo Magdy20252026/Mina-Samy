@@ -3,6 +3,12 @@ require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/config/db.php';
 require_once __DIR__ . '/includes/functions.php';
 
+$store = is_array($store ?? null) ? $store : [
+    'name' => '',
+    'subtitle' => '',
+    'logo' => 'assets/images/store-logo.svg',
+];
+
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'مدير') {
     http_response_code(403);
     die('غير مصرح لك بالدخول إلى إعدادات المتجر');
@@ -23,7 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $settings = [
             'name' => $name,
             'subtitle' => $subtitle,
-            'logo' => $store['logo'],
+            'logo' => $logoPath,
         ];
 
         if (isset($_FILES['logo']) && $_FILES['logo']['error'] !== UPLOAD_ERR_NO_FILE) {
@@ -31,8 +37,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $error = 'فشل رفع الشعار، حاول مرة أخرى';
             } else {
                 $extension = strtolower(pathinfo($_FILES['logo']['name'], PATHINFO_EXTENSION));
-                $imageInfo = @getimagesize($_FILES['logo']['tmp_name']);
-                $mimeType = $imageInfo['mime'] ?? '';
+                $imageInfo = getimagesize($_FILES['logo']['tmp_name']);
+                $mimeType = is_array($imageInfo) ? ($imageInfo['mime'] ?? '') : '';
 
                 if (function_exists('finfo_open')) {
                     $finfo = finfo_open(FILEINFO_MIME_TYPE);
