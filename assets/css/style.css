@@ -417,6 +417,10 @@ input:checked + .slider:before {
     margin-bottom: 20px;
 }
 
+[dir="rtl"] .page-header {
+    flex-direction: row-reverse;
+}
+
 .inline-link {
     display: inline-block;
     background: linear-gradient(135deg, var(--primary), #7c3aed);
