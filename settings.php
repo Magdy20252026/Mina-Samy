@@ -117,12 +117,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <nav class="sidebar-nav">
             <a href="dashboard.php"><span class="nav-icon">🏠</span><span class="nav-label">لوحة التحكم</span></a>
             <a href="users.php"><span class="nav-icon">👥</span><span class="nav-label">المستخدمين</span></a>
-            <?php foreach (getSidebarSections() as $section): ?>
-                <button type="button" aria-label="<?php echo e($section['aria_label']); ?>" disabled>
-                    <span class="nav-icon" aria-hidden="true"><?php echo e($section['icon']); ?></span>
-                    <span class="nav-label"><?php echo e($section['label']); ?></span>
-                </button>
-            <?php endforeach; ?>
+            <?php echo renderSidebarSections(); ?>
             <a href="settings.php" class="active"><span class="nav-icon">⚙️</span><span class="nav-label">إعدادات المتجر</span></a>
             <a href="logout.php" class="logout-btn"><span class="nav-icon">🚪</span><span class="nav-label">تسجيل الخروج</span></a>
         </nav>

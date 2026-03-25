@@ -945,6 +945,108 @@ body.dark.dashboard-page .status-item {
     background: rgba(59, 130, 246, 0.12);
 }
 
+.supplier-layout,
+.supplier-management-grid,
+.invoice-meta-grid,
+.payment-method-grid {
+    display: grid;
+    gap: 20px;
+}
+
+.supplier-layout,
+.supplier-management-grid {
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    margin-bottom: 24px;
+}
+
+.invoice-meta-grid,
+.payment-method-grid {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.summary-box,
+.invoice-detail-box,
+.invoice-item-row {
+    background: rgba(37, 99, 235, 0.06);
+    border: 1px solid rgba(37, 99, 235, 0.12);
+    border-radius: 16px;
+    padding: 16px;
+}
+
+.invoice-item-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1.6fr) repeat(2, minmax(120px, 1fr)) auto;
+    gap: 12px;
+    align-items: end;
+    margin-bottom: 12px;
+}
+
+.invoice-item-row:last-child {
+    margin-bottom: 0;
+}
+
+.button-inline,
+.table-actions .inline-link,
+.table-actions button,
+.secondary-button {
+    width: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.secondary-button {
+    background: rgba(37, 99, 235, 0.1);
+    color: var(--primary);
+    border: 1px solid rgba(37, 99, 235, 0.18);
+    box-shadow: none;
+}
+
+.secondary-button:hover {
+    background: rgba(37, 99, 235, 0.18);
+}
+
+.table-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.small-link {
+    padding: 8px 12px;
+    font-size: 13px;
+    box-shadow: none;
+}
+
+.muted-text,
+.summary-box p,
+.invoice-detail-box p {
+    color: var(--muted);
+}
+
+.summary-box strong,
+.invoice-detail-box strong {
+    display: block;
+    margin-top: 8px;
+    font-size: 22px;
+    color: var(--primary);
+}
+
+.section-stack {
+    display: grid;
+    gap: 16px;
+}
+
+.hidden {
+    display: none !important;
+}
+
+@media (max-width: 900px) {
+    .invoice-item-row {
+        grid-template-columns: 1fr;
+    }
+}
+
 @media (max-width: 900px) {
     .dashboard-page .app-layout {
         padding: 12px;
