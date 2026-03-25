@@ -596,13 +596,15 @@ $settledInvoicesCount = 0;
 $openInvoicesCount = 0;
 $supplierTotalPaid = 0.00;
 
-foreach ($supplierInvoices as $invoiceSummary) {
-    $supplierTotalPaid += (float) $invoiceSummary['amount_paid'];
+if ($supplierInvoices) {
+    foreach ($supplierInvoices as $invoiceSummary) {
+        $supplierTotalPaid += (float) $invoiceSummary['amount_paid'];
 
-    if ((float) $invoiceSummary['amount_due'] <= 0) {
-        $settledInvoicesCount++;
-    } else {
-        $openInvoicesCount++;
+        if ((float) $invoiceSummary['amount_due'] <= 0) {
+            $settledInvoicesCount++;
+        } else {
+            $openInvoicesCount++;
+        }
     }
 }
 
