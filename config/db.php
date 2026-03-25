@@ -12,8 +12,21 @@ $store = [
 
 $defaultLogo = 'assets/images/store-logo.svg';
 $storeLogo = is_string($store['logo'] ?? null) ? str_replace('\\', '/', $store['logo']) : '';
+$logoParts = array_values(array_filter(explode('/', $storeLogo), 'strlen'));
+$isValidLogo = count($logoParts) >= 3
+    && $logoParts[0] === 'assets'
+    && $logoParts[1] === 'images';
 
-if (!preg_match('#^assets/images/[A-Za-z0-9._/-]+$#', $storeLogo) || !is_file(__DIR__ . '/../' . $storeLogo)) {
+foreach ($logoParts as $part) {
+    if ($part === '.' || $part === '..' || !preg_match('/^[A-Za-z0-9._-]+$/', $part)) {
+        $isValidLogo = false;
+        break;
+    }
+}
+
+$storeLogo = implode('/', $logoParts);
+
+if (!$isValidLogo || !is_file(__DIR__ . '/../' . $storeLogo)) {
     $storeLogo = $defaultLogo;
 }
 

@@ -47,7 +47,6 @@ a {
     display: flex;
     min-height: 100vh;
     flex-direction: row;
-    direction: rtl;
 }
 
 .sidebar {
