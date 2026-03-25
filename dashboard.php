@@ -118,15 +118,15 @@ $totalSupervisors = (int) ($stats['total_supervisors'] ?? 0);
             </div>
 
             <div class="cards dashboard-actions">
-                <button type="button" class="card dashboard-action-btn"><span class="dashboard-action-icon">🚚</span><span class="dashboard-action-label">موردين</span></button>
-                <button type="button" class="card dashboard-action-btn"><span class="dashboard-action-icon">🏬</span><span class="dashboard-action-label">مخزن</span></button>
-                <button type="button" class="card dashboard-action-btn"><span class="dashboard-action-icon">📦</span><span class="dashboard-action-label">اصناف</span></button>
-                <button type="button" class="card dashboard-action-btn"><span class="dashboard-action-icon">🛒</span><span class="dashboard-action-label">مبيعات</span></button>
-                <button type="button" class="card dashboard-action-btn"><span class="dashboard-action-icon">🤝</span><span class="dashboard-action-label">عملاء</span></button>
-                <button type="button" class="card dashboard-action-btn"><span class="dashboard-action-icon">💸</span><span class="dashboard-action-label">مصروفات</span></button>
-                <button type="button" class="card dashboard-action-btn"><span class="dashboard-action-icon">👔</span><span class="dashboard-action-label">موظفين</span></button>
-                <button type="button" class="card dashboard-action-btn"><span class="dashboard-action-icon">💵</span><span class="dashboard-action-label">قبض موظفين</span></button>
-                <button type="button" class="card dashboard-action-btn"><span class="dashboard-action-icon">📊</span><span class="dashboard-action-label">احصائيات</span></button>
+                <button type="button" class="card dashboard-action-btn" aria-label="قسم الموردين"><span class="dashboard-action-icon">🚚</span><span class="dashboard-action-label">موردين</span></button>
+                <button type="button" class="card dashboard-action-btn" aria-label="قسم المخزن"><span class="dashboard-action-icon">🏬</span><span class="dashboard-action-label">مخزن</span></button>
+                <button type="button" class="card dashboard-action-btn" aria-label="قسم الأصناف"><span class="dashboard-action-icon">📦</span><span class="dashboard-action-label">أصناف</span></button>
+                <button type="button" class="card dashboard-action-btn" aria-label="قسم المبيعات"><span class="dashboard-action-icon">🛒</span><span class="dashboard-action-label">مبيعات</span></button>
+                <button type="button" class="card dashboard-action-btn" aria-label="قسم العملاء"><span class="dashboard-action-icon">🤝</span><span class="dashboard-action-label">عملاء</span></button>
+                <button type="button" class="card dashboard-action-btn" aria-label="قسم المصروفات"><span class="dashboard-action-icon">💸</span><span class="dashboard-action-label">مصروفات</span></button>
+                <button type="button" class="card dashboard-action-btn" aria-label="قسم الموظفين"><span class="dashboard-action-icon">👔</span><span class="dashboard-action-label">موظفين</span></button>
+                <button type="button" class="card dashboard-action-btn" aria-label="قسم قبض الموظفين"><span class="dashboard-action-icon">💵</span><span class="dashboard-action-label">قبض موظفين</span></button>
+                <button type="button" class="card dashboard-action-btn" aria-label="قسم الإحصائيات"><span class="dashboard-action-icon">📊</span><span class="dashboard-action-label">إحصائيات</span></button>
             </div>
         </section>
 
