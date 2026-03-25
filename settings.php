@@ -31,9 +31,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $error = 'فشل رفع الشعار، حاول مرة أخرى';
             } else {
                 $extension = strtolower(pathinfo($_FILES['logo']['name'], PATHINFO_EXTENSION));
-                $mimeType = function_exists('finfo_open')
-                    ? finfo_file(finfo_open(FILEINFO_MIME_TYPE), $_FILES['logo']['tmp_name'])
-                    : ($_FILES['logo']['type'] ?? '');
+                $imageInfo = @getimagesize($_FILES['logo']['tmp_name']);
+                $mimeType = $imageInfo['mime'] ?? '';
+
+                if (function_exists('finfo_open')) {
+                    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                    if ($finfo !== false) {
+                        $finfoMimeType = finfo_file($finfo, $_FILES['logo']['tmp_name']) ?: '';
+                        finfo_close($finfo);
+
+                        if ($finfoMimeType !== '') {
+                            $mimeType = $finfoMimeType;
+                        }
+                    }
+                }
 
                 if ($extension !== 'png' || $mimeType !== 'image/png') {
                     $error = 'يسمح فقط برفع ملفات PNG للشعار';

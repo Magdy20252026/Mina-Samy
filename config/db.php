@@ -16,7 +16,7 @@ $storeSettingsFile = __DIR__ . '/store.json';
 if (is_file($storeSettingsFile)) {
     $storedSettings = json_decode((string) file_get_contents($storeSettingsFile), true);
 
-    if (is_array($storedSettings)) {
+    if (json_last_error() === JSON_ERROR_NONE && is_array($storedSettings)) {
         if (isset($storedSettings['name']) && is_string($storedSettings['name']) && trim($storedSettings['name']) !== '') {
             $store['name'] = trim($storedSettings['name']);
         }
