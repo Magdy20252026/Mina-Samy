@@ -43,7 +43,7 @@ $totalSupervisors = (int) ($stats['total_supervisors'] ?? 0);
         <div class="theme-toggle-box">
             <span>🌗 الوضع</span>
             <label class="switch">
-                <input type="checkbox" id="themeToggle">
+                <input type="checkbox" id="themeToggle" aria-label="تبديل الوضع الداكن">
                 <span class="slider"></span>
             </label>
         </div>

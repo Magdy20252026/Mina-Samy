@@ -70,7 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="form-group" style="display:flex;justify-content:space-between;align-items:center;">
                 <span>الوضع الداكن</span>
                 <label class="switch" style="width:56px;">
-                    <input type="checkbox" id="themeToggle">
+                    <input type="checkbox" id="themeToggle" aria-label="تبديل الوضع الداكن">
                     <span class="slider"></span>
                 </label>
             </div>
