@@ -38,13 +38,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تسجيل الدخول - Mina Samy</title>
+    <title>تسجيل الدخول - <?php echo htmlspecialchars($store['name']); ?></title>
     <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body class="login-page">
     <div class="login-card">
-        <h2>Mina Samy</h2>
-        <p style="text-align:center;color:var(--muted);">تسجيل الدخول إلى لوحة التحكم</p>
+        <div class="login-brand">
+            <img src="<?php echo htmlspecialchars($store['logo']); ?>" alt="شعار <?php echo htmlspecialchars($store['name']); ?>" class="store-logo">
+            <div>
+                <h2><?php echo htmlspecialchars($store['name']); ?></h2>
+                <p class="login-brand-subtitle"><?php echo htmlspecialchars($store['subtitle']); ?></p>
+            </div>
+        </div>
+        <p class="login-description">✨ تسجيل الدخول إلى لوحة التحكم</p>
 
         <?php if ($error): ?>
             <div class="alert alert-error"><?php echo htmlspecialchars($error); ?></div>
@@ -69,7 +75,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </label>
             </div>
 
-            <button type="submit">دخول</button>
+            <button type="submit">🚀 دخول</button>
         </form>
     </div>
 
