@@ -771,7 +771,7 @@ input:checked + .slider:before {
     font: inherit;
     color: var(--text);
     cursor: pointer;
-    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    transition: transform 0.2s ease, border-color 0.2s ease;
 }
 
 .dashboard-action-btn:hover {

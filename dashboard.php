@@ -124,7 +124,7 @@ $totalSupervisors = (int) ($stats['total_supervisors'] ?? 0);
                 <button type="button" class="card dashboard-action-btn"><span class="dashboard-action-icon">🛒</span><span class="dashboard-action-label">مبيعات</span></button>
                 <button type="button" class="card dashboard-action-btn"><span class="dashboard-action-icon">🤝</span><span class="dashboard-action-label">عملاء</span></button>
                 <button type="button" class="card dashboard-action-btn"><span class="dashboard-action-icon">💸</span><span class="dashboard-action-label">مصروفات</span></button>
-                <button type="button" class="card dashboard-action-btn"><span class="dashboard-action-icon">👨‍💼</span><span class="dashboard-action-label">موظفين</span></button>
+                <button type="button" class="card dashboard-action-btn"><span class="dashboard-action-icon">👔</span><span class="dashboard-action-label">موظفين</span></button>
                 <button type="button" class="card dashboard-action-btn"><span class="dashboard-action-icon">💵</span><span class="dashboard-action-label">قبض موظفين</span></button>
                 <button type="button" class="card dashboard-action-btn"><span class="dashboard-action-icon">📊</span><span class="dashboard-action-label">احصائيات</span></button>
             </div>
