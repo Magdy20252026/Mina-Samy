@@ -513,14 +513,15 @@ $suppliersStmt = $pdo->query("
 ");
 $suppliers = $suppliersStmt->fetchAll(PDO::FETCH_ASSOC);
 
-$totalSuppliersBalance = 0.0;
-
-foreach ($suppliers as $supplierRow) {
-    $totalSuppliersBalance += (float) ($supplierRow['balance'] ?? 0);
-}
-
-$totalSuppliersBalance = normalizeAmount($totalSuppliersBalance);
-$unpaidInvoicesCount = (int) $pdo->query("SELECT COUNT(*) FROM supplier_invoices WHERE amount_due > 0")->fetchColumn();
+$supplierStatsStmt = $pdo->query("
+    SELECT
+        COALESCE(SUM(amount_due), 0) AS total_balance,
+        COUNT(CASE WHEN amount_due > 0 THEN 1 END) AS unpaid_invoices_count
+    FROM supplier_invoices
+");
+$supplierStats = $supplierStatsStmt->fetch(PDO::FETCH_ASSOC);
+$totalSuppliersBalance = normalizeAmount($supplierStats['total_balance'] ?? 0);
+$unpaidInvoicesCount = (int) ($supplierStats['unpaid_invoices_count'] ?? 0);
 
 $selectedSupplier = getSupplierById($pdo, $selectedSupplierId);
 
@@ -723,7 +724,7 @@ $settlementPaymentAmountTwoValue = $submittedAction === 'add_payment' ? trim((st
             </div>
             <div class="summary-box">
                 <p>عدد الفواتير غير المدفوعة</p>
-                <strong><?php echo (int) $unpaidInvoicesCount; ?></strong>
+                <strong><?php echo e($unpaidInvoicesCount); ?></strong>
             </div>
         </div>
 
