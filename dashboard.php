@@ -111,6 +111,25 @@ $totalSupervisors = (int) ($stats['total_supervisors'] ?? 0);
             </div>
         </div>
 
+        <section class="dashboard-actions-section">
+            <div class="page-intro">
+                <h2>أقسام لوحة التحكم</h2>
+                <p>أزرار جاهزة للتفعيل البرمجي لاحقًا.</p>
+            </div>
+
+            <div class="cards dashboard-actions">
+                <button type="button" class="card dashboard-action-btn"><span class="dashboard-action-icon">🚚</span><span class="dashboard-action-label">موردين</span></button>
+                <button type="button" class="card dashboard-action-btn"><span class="dashboard-action-icon">🏬</span><span class="dashboard-action-label">مخزن</span></button>
+                <button type="button" class="card dashboard-action-btn"><span class="dashboard-action-icon">📦</span><span class="dashboard-action-label">اصناف</span></button>
+                <button type="button" class="card dashboard-action-btn"><span class="dashboard-action-icon">🛒</span><span class="dashboard-action-label">مبيعات</span></button>
+                <button type="button" class="card dashboard-action-btn"><span class="dashboard-action-icon">🤝</span><span class="dashboard-action-label">عملاء</span></button>
+                <button type="button" class="card dashboard-action-btn"><span class="dashboard-action-icon">💸</span><span class="dashboard-action-label">مصروفات</span></button>
+                <button type="button" class="card dashboard-action-btn"><span class="dashboard-action-icon">👨‍💼</span><span class="dashboard-action-label">موظفين</span></button>
+                <button type="button" class="card dashboard-action-btn"><span class="dashboard-action-icon">💵</span><span class="dashboard-action-label">قبض موظفين</span></button>
+                <button type="button" class="card dashboard-action-btn"><span class="dashboard-action-icon">📊</span><span class="dashboard-action-label">احصائيات</span></button>
+            </div>
+        </section>
+
     </main>
 </div>
 
