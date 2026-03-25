@@ -4,11 +4,36 @@ $dbname = "if0_41476129_minasamystore";
 $dbuser = "if0_41476129";
 $dbpass = "CUueBsDrBhMBHW8";
 
-$store = [
+$defaultStore = [
     'name' => 'Mina Samy',
     'subtitle' => 'نظام المبيعات الذكي',
     'logo' => 'assets/images/store-logo.svg',
 ];
+
+$store = $defaultStore;
+$storeSettingsFile = __DIR__ . '/store.json';
+
+if (is_file($storeSettingsFile)) {
+    $storedSettingsJson = file_get_contents($storeSettingsFile);
+
+    if ($storedSettingsJson !== false) {
+        $storedSettings = json_decode($storedSettingsJson, true);
+
+        if (json_last_error() === JSON_ERROR_NONE && is_array($storedSettings)) {
+            if (isset($storedSettings['name']) && is_string($storedSettings['name']) && trim($storedSettings['name']) !== '') {
+                $store['name'] = trim($storedSettings['name']);
+            }
+
+            if (isset($storedSettings['subtitle']) && is_string($storedSettings['subtitle']) && trim($storedSettings['subtitle']) !== '') {
+                $store['subtitle'] = trim($storedSettings['subtitle']);
+            }
+
+            if (isset($storedSettings['logo']) && is_string($storedSettings['logo'])) {
+                $store['logo'] = trim($storedSettings['logo']);
+            }
+        }
+    }
+}
 
 $defaultLogo = 'assets/images/store-logo.svg';
 $storeLogo = is_string($store['logo'] ?? null) ? str_replace('\\', '/', $store['logo']) : '';
