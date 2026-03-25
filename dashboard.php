@@ -23,7 +23,7 @@ $totalSupervisors = (int) ($stats['total_supervisors'] ?? 0);
     <title>لوحة التحكم - <?php echo e($store['name']); ?></title>
     <link rel="stylesheet" href="assets/css/style.css">
 </head>
-<body>
+<body class="dashboard-page">
 <div class="app-layout">
     <aside class="sidebar">
         <div class="brand-block">
@@ -53,38 +53,103 @@ $totalSupervisors = (int) ($stats['total_supervisors'] ?? 0);
     </aside>
 
     <main class="main-content">
-        <header class="topbar">
+        <header class="topbar dashboard-hero">
             <div class="topbar-content">
+                <span class="section-badge">لوحة التحكم</span>
                 <h1>مرحبًا، <?php echo e($_SESSION['username']); ?></h1>
-                <small>الصلاحية: <?php echo e($_SESSION['role']); ?></small>
+                <p>متابعة حالة المستخدمين المسجلين فعليًا داخل نظام <?php echo e($store['name']); ?>.</p>
             </div>
-            <div class="store-chip">
-                <img src="<?php echo e($store['logo']); ?>" alt="شعار <?php echo e($store['name']); ?>" class="store-logo small-logo">
-                <span>✨ <?php echo e($store['name']); ?></span>
+            <div class="hero-meta">
+                <div class="hero-meta-card">
+                    <span>الصلاحية الحالية</span>
+                    <strong><?php echo e($_SESSION['role']); ?></strong>
+                </div>
+                <div class="hero-meta-card">
+                    <span>اسم النظام</span>
+                    <strong><?php echo e($store['name']); ?></strong>
+                </div>
+                <div class="store-chip">
+                    <img src="<?php echo e($store['logo']); ?>" alt="شعار <?php echo e($store['name']); ?>" class="store-logo small-logo">
+                    <span>✨ <?php echo e($store['name']); ?></span>
+                </div>
             </div>
         </header>
 
-        <section class="page-intro">
-            <h2>إحصائيات لوحة التحكم</h2>
-            <p>متابعة حالة المستخدمين المسجلين فعليًا داخل نظام Mina Samy.</p>
-        </section>
-
-        <div class="cards">
-            <div class="card">
-                <h3>عدد المستخدمين</h3>
+        <div class="cards dashboard-stats">
+            <div class="card stat-card stat-card-users">
+                <div class="stat-card-head">
+                    <div>
+                        <span class="stat-kicker">إجمالي السجلات</span>
+                        <h3>عدد المستخدمين</h3>
+                    </div>
+                    <span class="stat-icon">👥</span>
+                </div>
                 <div class="stat-number"><?php echo $totalUsers; ?></div>
                 <p>عدد المستخدمين الحقيقي المسجلين</p>
             </div>
-            <div class="card">
-                <h3>عدد المديرين</h3>
+            <div class="card stat-card stat-card-managers">
+                <div class="stat-card-head">
+                    <div>
+                        <span class="stat-kicker">صلاحيات الإدارة</span>
+                        <h3>عدد المديرين</h3>
+                    </div>
+                    <span class="stat-icon">🛡️</span>
+                </div>
                 <div class="stat-number"><?php echo $totalManagers; ?></div>
                 <p>إجمالي المستخدمين بصلاحية مدير</p>
             </div>
-            <div class="card">
-                <h3>عدد المشرفين</h3>
+            <div class="card stat-card stat-card-supervisors">
+                <div class="stat-card-head">
+                    <div>
+                        <span class="stat-kicker">الإشراف والمتابعة</span>
+                        <h3>عدد المشرفين</h3>
+                    </div>
+                    <span class="stat-icon">📈</span>
+                </div>
                 <div class="stat-number"><?php echo $totalSupervisors; ?></div>
                 <p>إجمالي المستخدمين بصلاحية مشرف</p>
             </div>
+        </div>
+
+        <div class="dashboard-panels">
+            <section class="table-card overview-panel">
+                <div class="panel-heading">
+                    <div>
+                        <h2>ملخص سريع</h2>
+                        <p>أهم العناصر التي تحتاجها في الواجهة الرئيسية.</p>
+                    </div>
+                </div>
+                <div class="status-list">
+                    <div class="status-item">
+                        <span>المستخدم الحالي</span>
+                        <strong><?php echo e($_SESSION['username']); ?></strong>
+                    </div>
+                    <div class="status-item">
+                        <span>الصلاحية</span>
+                        <strong><?php echo e($_SESSION['role']); ?></strong>
+                    </div>
+                    <div class="status-item">
+                        <span>اسم المتجر</span>
+                        <strong><?php echo e($store['name']); ?></strong>
+                    </div>
+                </div>
+            </section>
+
+            <section class="table-card quick-links-panel">
+                <div class="panel-heading">
+                    <div>
+                        <h2>وصول سريع</h2>
+                        <p>تنقل مباشر لأكثر الصفحات استخدامًا.</p>
+                    </div>
+                </div>
+                <div class="quick-links">
+                    <a href="users.php" class="quick-link">👥 إدارة المستخدمين</a>
+                    <?php if (($_SESSION['role'] ?? '') === 'مدير'): ?>
+                        <a href="settings.php" class="quick-link">⚙️ إعدادات المتجر</a>
+                    <?php endif; ?>
+                    <a href="logout.php" class="quick-link quick-link-danger">🚪 تسجيل الخروج</a>
+                </div>
+            </section>
         </div>
     </main>
 </div>
