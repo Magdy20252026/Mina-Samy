@@ -753,6 +753,42 @@ input:checked + .slider:before {
     margin-top: 22px;
 }
 
+.dashboard-actions-section {
+    margin-top: 28px;
+}
+
+.dashboard-actions {
+    margin-top: 18px;
+}
+
+.dashboard-action-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    min-height: 140px;
+    font: inherit;
+    color: var(--text);
+    cursor: pointer;
+    transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.dashboard-action-btn:hover {
+    transform: translateY(-2px);
+    border-color: rgba(37, 99, 235, 0.28);
+}
+
+.dashboard-action-icon {
+    font-size: 34px;
+    line-height: 1;
+}
+
+.dashboard-action-label {
+    font-size: 16px;
+    font-weight: 700;
+}
+
 .stat-card {
     border-radius: 24px;
     background: rgba(255, 255, 255, 0.84);
@@ -904,6 +940,10 @@ body.dark.dashboard-page .hero-meta-card {
 body.dark.dashboard-page .quick-link {
     background: rgba(255, 255, 255, 0.04);
     color: var(--text);
+}
+
+body.dark.dashboard-page .dashboard-action-btn:hover {
+    border-color: rgba(96, 165, 250, 0.4);
 }
 
 body.dark.dashboard-page .status-item {
