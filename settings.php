@@ -4,7 +4,8 @@ require_once __DIR__ . '/config/db.php';
 require_once __DIR__ . '/includes/functions.php';
 
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'مدير') {
-    die('غير مصرح لك');
+    http_response_code(403);
+    die('غير مصرح لك بالدخول إلى إعدادات المتجر');
 }
 
 $error = '';
@@ -62,8 +63,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         $store = [
-            'name' => $name === '' ? $store['name'] : $name,
-            'subtitle' => $subtitle === '' ? $store['subtitle'] : $subtitle,
+            'name' => $name,
+            'subtitle' => $subtitle,
             'logo' => $logoPath,
         ];
     }
