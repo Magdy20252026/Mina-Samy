@@ -410,7 +410,7 @@ input:checked + .slider:before {
     transform: translateX(-26px);
 }
 
-.page-header {
+[dir="rtl"] .page-header {
     display: flex;
     flex-direction: row-reverse;
     justify-content: space-between;
