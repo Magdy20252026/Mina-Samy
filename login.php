@@ -42,41 +42,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body class="login-page">
-    <div class="login-card">
-        <div class="login-brand">
-            <img src="<?php echo htmlspecialchars($store['logo']); ?>" alt="شعار <?php echo htmlspecialchars($store['name']); ?>" class="store-logo">
-            <div>
-                <h2><?php echo htmlspecialchars($store['name']); ?></h2>
-                <p class="login-brand-subtitle"><?php echo htmlspecialchars($store['subtitle']); ?></p>
-            </div>
-        </div>
-        <p class="login-description">✨ تسجيل الدخول إلى لوحة التحكم</p>
-
-        <?php if ($error): ?>
-            <div class="alert alert-error"><?php echo htmlspecialchars($error); ?></div>
-        <?php endif; ?>
-
-        <form method="POST">
-            <div class="form-group">
-                <label>اسم المستخدم</label>
-                <input type="text" name="username" placeholder="ادخل اسم المستخدم">
-            </div>
-
-            <div class="form-group">
-                <label>كلمة السر</label>
-                <input type="password" name="password" placeholder="ادخل كلمة السر">
-            </div>
-
-            <div class="form-group" style="display:flex;justify-content:space-between;align-items:center;">
-                <span>الوضع الداكن</span>
-                <label class="switch" style="width:56px;">
+    <div class="login-shell">
+        <div class="login-card">
+            <div class="login-window-controls">
+                <span class="window-dot" aria-hidden="true"></span>
+                <label class="mini-theme-switch" aria-label="تبديل الوضع الداكن">
                     <input type="checkbox" id="themeToggle" aria-label="تبديل الوضع الداكن">
-                    <span class="slider"></span>
+                    <span class="mini-slider"></span>
                 </label>
             </div>
 
-            <button type="submit">🚀 دخول</button>
-        </form>
+            <div class="login-brand">
+                <div class="login-logo-ring">
+                    <img src="<?php echo htmlspecialchars($store['logo']); ?>" alt="شعار <?php echo htmlspecialchars($store['name']); ?>" class="store-logo">
+                </div>
+                <div>
+                    <h2><?php echo htmlspecialchars($store['name']); ?></h2>
+                    <p class="login-brand-subtitle"><?php echo htmlspecialchars($store['subtitle']); ?></p>
+                </div>
+            </div>
+
+            <?php if ($error): ?>
+                <div class="alert alert-error"><?php echo htmlspecialchars($error); ?></div>
+            <?php endif; ?>
+
+            <form method="POST" class="login-form">
+                <div class="form-group login-field">
+                    <label for="username">اسم المستخدم</label>
+                    <div class="input-shell">
+                        <span class="input-icon" aria-hidden="true">👤</span>
+                        <input id="username" type="text" name="username" placeholder="admin" autocomplete="username" required>
+                    </div>
+                </div>
+
+                <div class="form-group login-field">
+                    <label for="password">كلمة السر</label>
+                    <div class="input-shell">
+                        <span class="input-icon" aria-hidden="true">🔒</span>
+                        <input id="password" type="password" name="password" placeholder="••••••" autocomplete="current-password" required>
+                    </div>
+                </div>
+
+                <button type="submit" class="login-submit">📚 تسجيل الدخول إلى لوحة التحكم</button>
+            </form>
+        </div>
     </div>
 
     <script src="assets/js/theme.js"></script>
