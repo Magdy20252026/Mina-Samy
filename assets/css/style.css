@@ -199,7 +199,7 @@ button {
 select {
     appearance: none;
     background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
-    background-position: calc(14px) calc(50% - 3px), calc(24px) calc(50% - 3px);
+    background-position: 14px calc(50% - 3px), 24px calc(50% - 3px);
     background-size: 8px 8px, 8px 8px;
     background-repeat: no-repeat;
     padding-left: 42px;
