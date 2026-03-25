@@ -513,6 +513,15 @@ $suppliersStmt = $pdo->query("
 ");
 $suppliers = $suppliersStmt->fetchAll(PDO::FETCH_ASSOC);
 
+$totalSuppliersBalance = 0.0;
+
+foreach ($suppliers as $supplierRow) {
+    $totalSuppliersBalance += (float) ($supplierRow['balance'] ?? 0);
+}
+
+$totalSuppliersBalance = normalizeAmount($totalSuppliersBalance);
+$unpaidInvoicesCount = (int) $pdo->query("SELECT COUNT(*) FROM supplier_invoices WHERE amount_due > 0")->fetchColumn();
+
 $selectedSupplier = getSupplierById($pdo, $selectedSupplierId);
 
 if (!$selectedSupplier) {
@@ -706,6 +715,17 @@ $settlementPaymentAmountTwoValue = $submittedAction === 'add_payment' ? trim((st
         <?php if ($success !== ''): ?>
             <div class="alert alert-success"><?php echo e($success); ?></div>
         <?php endif; ?>
+
+        <div class="invoice-meta-grid" style="margin-bottom: 1.5rem;">
+            <div class="summary-box">
+                <p>إجمالي رصيد الموردين</p>
+                <strong><?php echo e(formatMoney($totalSuppliersBalance)); ?> ج.م</strong>
+            </div>
+            <div class="summary-box">
+                <p>عدد الفواتير غير المدفوعة</p>
+                <strong><?php echo (int) $unpaidInvoicesCount; ?></strong>
+            </div>
+        </div>
 
         <div class="supplier-layout">
             <div class="form-card">
