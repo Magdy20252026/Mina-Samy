@@ -137,6 +137,11 @@ a {
     cursor: pointer;
 }
 
+.sidebar-nav button:disabled {
+    cursor: default;
+    opacity: 0.72;
+}
+
 .sidebar-nav .nav-label {
     flex: 1;
     text-align: right;
@@ -147,6 +152,11 @@ a {
 .sidebar-nav button:hover {
     background: linear-gradient(135deg, rgba(59, 130, 246, 0.34), rgba(168, 85, 247, 0.28));
     transform: translateY(-1px);
+}
+
+.sidebar-nav button:disabled:hover {
+    background: rgba(255, 255, 255, 0.08);
+    transform: none;
 }
 
 .sidebar-section-group {

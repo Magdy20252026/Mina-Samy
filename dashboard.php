@@ -43,7 +43,7 @@ $totalSupervisors = (int) ($stats['total_supervisors'] ?? 0);
             <div class="sidebar-section-group">
                 <span class="sidebar-section-title">أقسام النظام</span>
                 <?php foreach (getSidebarSections() as $section): ?>
-                    <button type="button" class="sidebar-action-link" aria-label="<?php echo e($section['aria_label']); ?>">
+                    <button type="button" class="sidebar-action-link" aria-label="<?php echo e($section['aria_label']); ?>" disabled>
                         <span class="nav-icon" aria-hidden="true"><?php echo e($section['icon']); ?></span>
                         <span class="nav-label"><?php echo e($section['label']); ?></span>
                     </button>
