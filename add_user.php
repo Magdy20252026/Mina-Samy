@@ -57,7 +57,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <nav class="sidebar-nav">
             <a href="dashboard.php"><span class="nav-icon">🏠</span><span>لوحة التحكم</span></a>
-            <a href="users.php"><span class="nav-icon">👥</span><span>المستخدمين</span></a>
+            <a href="users.php" class="active"><span class="nav-icon">👥</span><span>المستخدمين</span></a>
+            <a href="settings.php"><span class="nav-icon">⚙️</span><span>إعدادات المتجر</span></a>
             <a href="logout.php" class="logout-btn"><span class="nav-icon">🚪</span><span>تسجيل الخروج</span></a>
         </nav>
 

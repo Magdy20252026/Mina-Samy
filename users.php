@@ -27,7 +27,10 @@ $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         <nav class="sidebar-nav">
             <a href="dashboard.php"><span class="nav-icon">🏠</span><span>لوحة التحكم</span></a>
-            <a href="users.php"><span class="nav-icon">👥</span><span>المستخدمين</span></a>
+            <a href="users.php" class="active"><span class="nav-icon">👥</span><span>المستخدمين</span></a>
+            <?php if (($_SESSION['role'] ?? '') === 'مدير'): ?>
+                <a href="settings.php"><span class="nav-icon">⚙️</span><span>إعدادات المتجر</span></a>
+            <?php endif; ?>
             <a href="logout.php" class="logout-btn"><span class="nav-icon">🚪</span><span>تسجيل الخروج</span></a>
         </nav>
 
