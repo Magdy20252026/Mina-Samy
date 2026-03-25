@@ -391,10 +391,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                         header('Location: ' . supplierUrl([
                             'supplier_id' => $selectedSupplierId,
-                            'invoice_id' => $invoiceId,
-                            'view' => 'invoices',
                             'success' => 'تم حفظ فاتورة المورد بنجاح',
-                        ]));
+                        ]) . '#selected-supplier-focus');
                         exit;
                     } catch (Throwable $throwable) {
                         if ($pdo->inTransaction()) {
@@ -799,7 +797,7 @@ $settlementPaymentAmountTwoValue = $submittedAction === 'add_payment' ? trim((st
         </div>
 
         <?php if ($selectedSupplier): ?>
-            <div class="table-card supplier-focus-card">
+            <div class="table-card supplier-focus-card" id="selected-supplier-focus">
                 <div class="supplier-focus-header">
                     <div>
                         <div class="page-header">
@@ -837,7 +835,12 @@ $settlementPaymentAmountTwoValue = $submittedAction === 'add_payment' ? trim((st
                         <div class="form-card" id="invoice-form">
                             <div class="page-header">
                                 <h2>إضافة فاتورة للمورد: <?php echo e($selectedSupplier['name']); ?></h2>
-                                <span class="muted-text">أدخل الأصناف ثم اختر حالة التسديد المناسبة فقط.</span>
+                                <div class="table-actions">
+                                    <span class="muted-text">أدخل الأصناف ثم اختر حالة التسديد المناسبة فقط.</span>
+                                    <a class="inline-link small-link secondary-button" href="<?php echo e(supplierUrl([
+                                        'supplier_id' => (int) $selectedSupplier['id'],
+                                    ])); ?>#selected-supplier-focus">إغلاق</a>
+                                </div>
                             </div>
 
                             <div class="invoice-meta-grid">
@@ -961,7 +964,12 @@ $settlementPaymentAmountTwoValue = $submittedAction === 'add_payment' ? trim((st
                         <div class="table-card" id="supplier-invoices">
                             <div class="page-header">
                                 <h2>الفواتير السابقة للمورد</h2>
-                                <span class="muted-text">كل فاتورة تعرض سجل التسديدات الخاص بها بشكل مستقل.</span>
+                                <div class="table-actions">
+                                    <span class="muted-text">كل فاتورة تعرض سجل التسديدات الخاص بها بشكل مستقل.</span>
+                                    <a class="inline-link small-link secondary-button" href="<?php echo e(supplierUrl([
+                                        'supplier_id' => (int) $selectedSupplier['id'],
+                                    ])); ?>#selected-supplier-focus">إغلاق</a>
+                                </div>
                             </div>
 
                             <?php if ($supplierInvoices): ?>
@@ -1071,6 +1079,10 @@ $settlementPaymentAmountTwoValue = $submittedAction === 'add_payment' ? trim((st
                 <div class="table-card">
                     <div class="page-header">
                         <h2>تفاصيل الفاتورة رقم <?php echo (int) $selectedInvoice['id']; ?></h2>
+                        <a class="inline-link small-link secondary-button" href="<?php echo e(supplierUrl([
+                            'supplier_id' => (int) $selectedSupplier['id'],
+                            'view' => 'invoices',
+                        ])); ?>#supplier-invoices">إغلاق</a>
                     </div>
 
                     <div class="invoice-meta-grid">
