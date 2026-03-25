@@ -46,7 +46,7 @@ a {
 .app-layout {
     display: flex;
     min-height: 100vh;
-    flex-direction: row-reverse;
+    flex-direction: row;
 }
 
 .sidebar {
@@ -57,7 +57,7 @@ a {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    border-right: 1px solid rgba(255, 255, 255, 0.08);
+    border-left: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .brand {
