@@ -35,12 +35,12 @@ $totalSupervisors = (int) ($stats['total_supervisors'] ?? 0);
         </div>
 
         <nav class="sidebar-nav">
-            <a href="dashboard.php" class="active"><span class="nav-icon">🏠</span><span>لوحة التحكم</span></a>
-            <a href="users.php"><span class="nav-icon">👥</span><span>المستخدمين</span></a>
+            <a href="dashboard.php" class="active"><span class="nav-icon">🏠</span><span class="nav-label">لوحة التحكم</span></a>
+            <a href="users.php"><span class="nav-icon">👥</span><span class="nav-label">المستخدمين</span></a>
             <?php if (($_SESSION['role'] ?? '') === 'مدير'): ?>
-                <a href="settings.php"><span class="nav-icon">⚙️</span><span>إعدادات المتجر</span></a>
+                <a href="settings.php"><span class="nav-icon">⚙️</span><span class="nav-label">إعدادات المتجر</span></a>
             <?php endif; ?>
-            <a href="logout.php" class="logout-btn"><span class="nav-icon">🚪</span><span>تسجيل الخروج</span></a>
+            <a href="logout.php" class="logout-btn"><span class="nav-icon">🚪</span><span class="nav-label">تسجيل الخروج</span></a>
         </nav>
 
         <div class="theme-toggle-box">
