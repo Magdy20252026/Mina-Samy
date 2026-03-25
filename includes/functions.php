@@ -21,10 +21,10 @@ function e($value)
 function getSidebarSections()
 {
     return [
-        ['icon' => '🚚', 'label' => 'موردين', 'aria_label' => 'قسم الموردين'],
-        ['icon' => '🏬', 'label' => 'مخزن', 'aria_label' => 'قسم المخزن'],
-        ['icon' => '📦', 'label' => 'أصناف', 'aria_label' => 'قسم الأصناف'],
-        ['icon' => '🛒', 'label' => 'مبيعات', 'aria_label' => 'قسم المبيعات'],
+        ['icon' => '🚚', 'label' => 'الموردين', 'aria_label' => 'قسم الموردين'],
+        ['icon' => '🏬', 'label' => 'المخزن', 'aria_label' => 'قسم المخزن'],
+        ['icon' => '📦', 'label' => 'الأصناف', 'aria_label' => 'قسم الأصناف'],
+        ['icon' => '🛒', 'label' => 'المبيعات', 'aria_label' => 'قسم المبيعات'],
         ['icon' => '🤝', 'label' => 'عملاء', 'aria_label' => 'قسم العملاء'],
         ['icon' => '💸', 'label' => 'مصروفات', 'aria_label' => 'قسم المصروفات'],
         ['icon' => '👔', 'label' => 'موظفين', 'aria_label' => 'قسم الموظفين'],
