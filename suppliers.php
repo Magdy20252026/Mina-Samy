@@ -774,7 +774,7 @@ $settlementPaymentAmountTwoValue = $submittedAction === 'add_payment' ? trim((st
             </div>
 
             <?php if ($showInvoiceForm || $showSupplierInvoices): ?>
-                <div class="supplier-management-grid<?php echo ($showInvoiceForm xor $showSupplierInvoices) ? ' supplier-management-grid-single' : ''; ?>">
+                <div class="supplier-management-grid<?php echo (($showInvoiceForm && !$showSupplierInvoices) || (!$showInvoiceForm && $showSupplierInvoices)) ? ' supplier-management-grid-single' : ''; ?>">
                     <?php if ($showInvoiceForm): ?>
                         <div class="form-card" id="invoice-form">
                             <div class="page-header">
