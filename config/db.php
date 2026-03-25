@@ -14,19 +14,23 @@ $store = $defaultStore;
 $storeSettingsFile = __DIR__ . '/store.json';
 
 if (is_file($storeSettingsFile)) {
-    $storedSettings = json_decode((string) file_get_contents($storeSettingsFile), true);
+    $storedSettingsJson = file_get_contents($storeSettingsFile);
 
-    if (json_last_error() === JSON_ERROR_NONE && is_array($storedSettings)) {
-        if (isset($storedSettings['name']) && is_string($storedSettings['name']) && trim($storedSettings['name']) !== '') {
-            $store['name'] = trim($storedSettings['name']);
-        }
+    if ($storedSettingsJson !== false) {
+        $storedSettings = json_decode($storedSettingsJson, true);
 
-        if (isset($storedSettings['subtitle']) && is_string($storedSettings['subtitle']) && trim($storedSettings['subtitle']) !== '') {
-            $store['subtitle'] = trim($storedSettings['subtitle']);
-        }
+        if (json_last_error() === JSON_ERROR_NONE && is_array($storedSettings)) {
+            if (isset($storedSettings['name']) && is_string($storedSettings['name']) && trim($storedSettings['name']) !== '') {
+                $store['name'] = trim($storedSettings['name']);
+            }
 
-        if (isset($storedSettings['logo']) && is_string($storedSettings['logo'])) {
-            $store['logo'] = trim($storedSettings['logo']);
+            if (isset($storedSettings['subtitle']) && is_string($storedSettings['subtitle']) && trim($storedSettings['subtitle']) !== '') {
+                $store['subtitle'] = trim($storedSettings['subtitle']);
+            }
+
+            if (isset($storedSettings['logo']) && is_string($storedSettings['logo'])) {
+                $store['logo'] = trim($storedSettings['logo']);
+            }
         }
     }
 }

@@ -57,8 +57,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 } else {
                     $targetRelativePath = 'assets/images/store-logo.png';
                     $targetAbsolutePath = __DIR__ . '/' . $targetRelativePath;
+                    $targetDirectory = dirname($targetAbsolutePath);
 
-                    if (!move_uploaded_file($_FILES['logo']['tmp_name'], $targetAbsolutePath)) {
+                    if (!is_dir($targetDirectory) || !is_writable($targetDirectory)) {
+                        $error = 'مجلد الشعار غير متاح للكتابة داخل النظام';
+                    } elseif (!move_uploaded_file($_FILES['logo']['tmp_name'], $targetAbsolutePath)) {
                         $error = 'تعذر حفظ ملف الشعار داخل النظام';
                     } else {
                         $settings['logo'] = $targetRelativePath;
@@ -70,8 +73,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($error === '') {
             $encodedSettings = json_encode($settings, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            $settingsDirectory = dirname($storeSettingsFile);
 
-            if ($encodedSettings === false || file_put_contents($storeSettingsFile, $encodedSettings, LOCK_EX) === false) {
+            if ($encodedSettings === false) {
+                $error = 'تعذر تجهيز إعدادات المتجر للحفظ';
+            } elseif (!is_dir($settingsDirectory) || !is_writable($settingsDirectory)) {
+                $error = 'مجلد إعدادات المتجر غير متاح للكتابة';
+            } elseif (file_put_contents($storeSettingsFile, $encodedSettings, LOCK_EX) === false) {
                 $error = 'تعذر حفظ إعدادات المتجر';
             } else {
                 header('Location: settings.php?saved=1');
