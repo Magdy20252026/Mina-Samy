@@ -11,7 +11,7 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'مدير') {
 $error = '';
 $success = isset($_GET['saved']) ? 'تم تحديث بيانات المتجر بنجاح' : '';
 $storeSettingsFile = __DIR__ . '/config/store.json';
-$logoPath = $store['logo'];
+$logoPath = $store['logo'] ?? 'assets/images/store-logo.svg';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $name = trim($_POST['name'] ?? '');
@@ -65,7 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($error === '') {
             $encodedSettings = json_encode($settings, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
-            if ($encodedSettings === false || file_put_contents($storeSettingsFile, $encodedSettings . PHP_EOL, LOCK_EX) === false) {
+            if ($encodedSettings === false || file_put_contents($storeSettingsFile, $encodedSettings, LOCK_EX) === false) {
                 $error = 'تعذر حفظ إعدادات المتجر';
             } else {
                 header('Location: settings.php?saved=1');
