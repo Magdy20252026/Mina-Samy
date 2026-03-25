@@ -32,16 +32,16 @@ CREATE TABLE `users` (
   `id` int(11) NOT NULL,
   `username` varchar(100) NOT NULL,
   `password` varchar(255) NOT NULL,
-  `role` enum('????','????') NOT NULL,
+  `role` enum('مدير','مشرف') NOT NULL,
   `created_at` timestamp NULL DEFAULT current_timestamp()
-) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
+) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- إرجاع أو استيراد بيانات الجدول `users`
 --
 
 INSERT INTO `users` (`id`, `username`, `password`, `role`, `created_at`) VALUES
-(1, 'admin', '$2y$10$Bn1ytHQSqR8damHePTGaBe4bjiCCKtRgV0Ikc6tt4yfLETXgfPZjG', '????', '2026-03-25 16:17:00');
+(1, 'admin', '$2y$10$Bn1ytHQSqR8damHePTGaBe4bjiCCKtRgV0Ikc6tt4yfLETXgfPZjG', 'مدير', '2026-03-25 16:17:00');
 
 --
 -- Indexes for dumped tables

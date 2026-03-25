@@ -3,8 +3,17 @@ require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/config/db.php';
 require_once __DIR__ . '/includes/functions.php';
 
-$stmtUsers = $pdo->query("SELECT COUNT(*) FROM users");
-$totalUsers = (int) $stmtUsers->fetchColumn();
+$stmtUsers = $pdo->query("
+    SELECT
+        COUNT(*) AS total_users,
+        COALESCE(SUM(role = 'مدير'), 0) AS total_managers,
+        COALESCE(SUM(role = 'مشرف'), 0) AS total_supervisors
+    FROM users
+");
+$stats = $stmtUsers->fetch(PDO::FETCH_ASSOC) ?: [];
+$totalUsers = (int) ($stats['total_users'] ?? 0);
+$totalManagers = (int) ($stats['total_managers'] ?? 0);
+$totalSupervisors = (int) ($stats['total_supervisors'] ?? 0);
 ?>
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -45,11 +54,26 @@ $totalUsers = (int) $stmtUsers->fetchColumn();
             </div>
         </header>
 
+        <section class="page-intro">
+            <h2>إحصائيات لوحة التحكم</h2>
+            <p>متابعة حالة المستخدمين المسجلين فعليًا داخل نظام Mina Samy.</p>
+        </section>
+
         <div class="cards">
             <div class="card">
                 <h3>عدد المستخدمين</h3>
                 <div class="stat-number"><?php echo $totalUsers; ?></div>
                 <p>عدد المستخدمين الحقيقي المسجلين</p>
+            </div>
+            <div class="card">
+                <h3>عدد المديرين</h3>
+                <div class="stat-number"><?php echo $totalManagers; ?></div>
+                <p>إجمالي المستخدمين بصلاحية مدير</p>
+            </div>
+            <div class="card">
+                <h3>عدد المشرفين</h3>
+                <div class="stat-number"><?php echo $totalSupervisors; ?></div>
+                <p>إجمالي المستخدمين بصلاحية مشرف</p>
             </div>
         </div>
     </main>
