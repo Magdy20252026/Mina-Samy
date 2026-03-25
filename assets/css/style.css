@@ -121,8 +121,14 @@ a {
     font-size: 16px;
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 10px;
     box-shadow: 0 8px 16px rgba(15, 23, 42, 0.18);
+}
+
+.sidebar-nav a span:last-child {
+    flex: 1;
+    text-align: right;
 }
 
 .sidebar-nav a.active,

@@ -111,46 +111,6 @@ $totalSupervisors = (int) ($stats['total_supervisors'] ?? 0);
             </div>
         </div>
 
-        <div class="dashboard-panels">
-            <section class="table-card overview-panel">
-                <div class="panel-heading">
-                    <div>
-                        <h2>ملخص سريع</h2>
-                        <p>أهم العناصر التي تحتاجها في الواجهة الرئيسية.</p>
-                    </div>
-                </div>
-                <div class="status-list">
-                    <div class="status-item">
-                        <span>المستخدم الحالي</span>
-                        <strong><?php echo e($_SESSION['username']); ?></strong>
-                    </div>
-                    <div class="status-item">
-                        <span>الصلاحية</span>
-                        <strong><?php echo e($_SESSION['role']); ?></strong>
-                    </div>
-                    <div class="status-item">
-                        <span>اسم المتجر</span>
-                        <strong><?php echo e($store['name']); ?></strong>
-                    </div>
-                </div>
-            </section>
-
-            <section class="table-card quick-links-panel">
-                <div class="panel-heading">
-                    <div>
-                        <h2>وصول سريع</h2>
-                        <p>تنقل مباشر لأكثر الصفحات استخدامًا.</p>
-                    </div>
-                </div>
-                <div class="quick-links">
-                    <a href="users.php" class="quick-link">👥 إدارة المستخدمين</a>
-                    <?php if (($_SESSION['role'] ?? '') === 'مدير'): ?>
-                        <a href="settings.php" class="quick-link">⚙️ إعدادات المتجر</a>
-                    <?php endif; ?>
-                    <a href="logout.php" class="quick-link quick-link-danger">🚪 تسجيل الخروج</a>
-                </div>
-            </section>
-        </div>
     </main>
 </div>
 
