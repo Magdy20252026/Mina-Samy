@@ -40,6 +40,15 @@ $totalSupervisors = (int) ($stats['total_supervisors'] ?? 0);
             <?php if (($_SESSION['role'] ?? '') === 'مدير'): ?>
                 <a href="settings.php"><span class="nav-icon">⚙️</span><span class="nav-label">إعدادات المتجر</span></a>
             <?php endif; ?>
+            <div class="sidebar-section-group">
+                <span class="sidebar-section-title">أقسام النظام</span>
+                <?php foreach (getSidebarSections() as $section): ?>
+                    <button type="button" class="sidebar-action-link" aria-label="<?php echo e($section['aria_label']); ?>">
+                        <span class="nav-icon" aria-hidden="true"><?php echo e($section['icon']); ?></span>
+                        <span class="nav-label"><?php echo e($section['label']); ?></span>
+                    </button>
+                <?php endforeach; ?>
+            </div>
             <a href="logout.php" class="logout-btn"><span class="nav-icon">🚪</span><span class="nav-label">تسجيل الخروج</span></a>
         </nav>
 
@@ -110,25 +119,6 @@ $totalSupervisors = (int) ($stats['total_supervisors'] ?? 0);
                 <p>إجمالي المستخدمين بصلاحية مشرف</p>
             </div>
         </div>
-
-        <section class="dashboard-actions-section">
-            <div class="page-intro">
-                <h2>أقسام لوحة التحكم</h2>
-                <p>أزرار جاهزة للتفعيل البرمجي لاحقًا.</p>
-            </div>
-
-            <div class="cards dashboard-actions">
-                <button type="button" class="card dashboard-action-btn" aria-label="قسم الموردين"><span class="dashboard-action-icon" aria-hidden="true">🚚</span><span class="dashboard-action-label">موردين</span></button>
-                <button type="button" class="card dashboard-action-btn" aria-label="قسم المخزن"><span class="dashboard-action-icon" aria-hidden="true">🏬</span><span class="dashboard-action-label">مخزن</span></button>
-                <button type="button" class="card dashboard-action-btn" aria-label="قسم الأصناف"><span class="dashboard-action-icon" aria-hidden="true">📦</span><span class="dashboard-action-label">أصناف</span></button>
-                <button type="button" class="card dashboard-action-btn" aria-label="قسم المبيعات"><span class="dashboard-action-icon" aria-hidden="true">🛒</span><span class="dashboard-action-label">مبيعات</span></button>
-                <button type="button" class="card dashboard-action-btn" aria-label="قسم العملاء"><span class="dashboard-action-icon" aria-hidden="true">🤝</span><span class="dashboard-action-label">عملاء</span></button>
-                <button type="button" class="card dashboard-action-btn" aria-label="قسم المصروفات"><span class="dashboard-action-icon" aria-hidden="true">💸</span><span class="dashboard-action-label">مصروفات</span></button>
-                <button type="button" class="card dashboard-action-btn" aria-label="قسم الموظفين"><span class="dashboard-action-icon" aria-hidden="true">👔</span><span class="dashboard-action-label">موظفين</span></button>
-                <button type="button" class="card dashboard-action-btn" aria-label="قسم قبض الموظفين"><span class="dashboard-action-icon" aria-hidden="true">💵</span><span class="dashboard-action-label">قبض موظفين</span></button>
-                <button type="button" class="card dashboard-action-btn" aria-label="قسم الإحصائيات"><span class="dashboard-action-icon" aria-hidden="true">📊</span><span class="dashboard-action-label">إحصائيات</span></button>
-            </div>
-        </section>
 
     </main>
 </div>
