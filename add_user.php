@@ -9,6 +9,8 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'مدير') {
 
 $error = '';
 $success = '';
+$username = '';
+$role = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = trim($_POST['username'] ?? '');
@@ -55,6 +57,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <a href="users.php">المستخدمين</a>
             <a href="logout.php" class="logout-btn">تسجيل الخروج</a>
         </nav>
+
+        <div class="theme-toggle-box">
+            <span>الوضع</span>
+            <label class="switch">
+                <input type="checkbox" id="themeToggle">
+                <span class="slider"></span>
+            </label>
+        </div>
     </aside>
 
     <main class="main-content">
@@ -74,7 +84,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <form method="POST">
                 <div class="form-group">
                     <label>اسم المستخدم</label>
-                    <input type="text" name="username" required>
+                    <input type="text" name="username" value="<?php echo e($username); ?>" required>
                 </div>
 
                 <div class="form-group">
@@ -82,12 +92,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <input type="password" name="password" required>
                 </div>
 
-                <div class="form-group">
+                <div class="form-group select-group">
                     <label>الصلاحية</label>
                     <select name="role" required>
                         <option value="">اختر الصلاحية</option>
-                        <option value="مدير">مدير</option>
-                        <option value="مشرف">مشرف</option>
+                        <option value="مدير" <?php echo $role === 'مدير' ? 'selected' : ''; ?>>مدير</option>
+                        <option value="مشرف" <?php echo $role === 'مشرف' ? 'selected' : ''; ?>>مشرف</option>
                     </select>
                 </div>
 
@@ -96,5 +106,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
     </main>
 </div>
+<script src="assets/js/theme.js"></script>
 </body>
 </html>
