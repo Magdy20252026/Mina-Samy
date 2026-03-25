@@ -953,7 +953,12 @@ body.dark.dashboard-page .status-item {
     gap: 20px;
 }
 
-.supplier-layout,
+.supplier-layout {
+    grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+    align-items: start;
+    margin-bottom: 24px;
+}
+
 .supplier-management-grid {
     grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
     margin-bottom: 24px;
@@ -1012,6 +1017,29 @@ body.dark.dashboard-page .status-item {
     gap: 8px;
 }
 
+.supplier-focus-card {
+    margin-bottom: 24px;
+}
+
+.supplier-focus-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+
+.supplier-focus-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.supplier-management-grid-single {
+    grid-template-columns: minmax(0, 1fr);
+}
+
 .small-link {
     padding: 8px 12px;
     font-size: 13px;
@@ -1042,6 +1070,10 @@ body.dark.dashboard-page .status-item {
 }
 
 @media (max-width: 900px) {
+    .supplier-layout {
+        grid-template-columns: 1fr;
+    }
+
     .invoice-item-row {
         grid-template-columns: 1fr;
     }
