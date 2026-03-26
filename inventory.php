@@ -7,6 +7,8 @@ $error = '';
 $success = trim((string) ($_GET['success'] ?? ''));
 $submittedAction = trim((string) ($_POST['form_action'] ?? ''));
 $issuedSearch = trim((string) ($_GET['issued_search'] ?? ''));
+$selectedIssueId = 0;
+$selectedEditId = 0;
 
 function ensureInventoryTables(PDO $pdo)
 {
@@ -50,6 +52,18 @@ function ensureInventoryTables(PDO $pdo)
 function normalizeInventoryAmount($value)
 {
     return round((float) $value, 2);
+}
+
+function normalizeInventoryStatus($quantity, $fallbackStatus = 'متاح')
+{
+    $allowedStatuses = ['متاح', 'منتهي'];
+    $fallbackStatus = in_array($fallbackStatus, $allowedStatuses, true) ? $fallbackStatus : 'متاح';
+
+    if ($quantity === null) {
+        return $fallbackStatus;
+    }
+
+    return normalizeInventoryAmount($quantity) > 0 ? 'متاح' : 'منتهي';
 }
 
 function buildInventoryPageUrl(array $params = [], $fragment = '')
@@ -180,6 +194,70 @@ if ($submittedAction === 'add_inventory_item') {
                 throw $exception;
             }
         }
+    }
+}
+
+if ($submittedAction === 'edit_inventory_item') {
+    $inventoryItemId = (int) ($_POST['item_id'] ?? 0);
+    $selectedEditId = $inventoryItemId;
+    $barcode = trim((string) ($_POST['barcode'] ?? ''));
+    $itemName = trim((string) ($_POST['item_name'] ?? ''));
+    $quantityValue = trim((string) ($_POST['quantity'] ?? ''));
+    $priceValue = trim((string) ($_POST['unit_price'] ?? ''));
+    $itemStatus = trim((string) ($_POST['item_status'] ?? 'متاح'));
+    $existingInventoryItem = fetchInventoryItemById($pdo, $inventoryItemId);
+
+    if ($inventoryItemId <= 0 || !$existingInventoryItem) {
+        $error = 'لم يتم العثور على الصنف المطلوب تعديله.';
+    } elseif ($itemName === '') {
+        $error = 'يرجى إدخال اسم الصنف قبل الحفظ.';
+    } elseif ($priceValue === '' || !is_numeric($priceValue) || normalizeInventoryAmount($priceValue) < 0) {
+        $error = 'يرجى إدخال سعر صالح للصنف.';
+    } elseif ($quantityValue !== '' && (!is_numeric($quantityValue) || normalizeInventoryAmount($quantityValue) < 0)) {
+        $error = 'إذا تم إدخال عدد فيجب أن يكون صفر أو أكبر.';
+    } else {
+        $updatedAt = getEgyptDateTimeValue();
+        $quantity = $quantityValue === '' ? null : normalizeInventoryAmount($quantityValue);
+        $unitPrice = normalizeInventoryAmount($priceValue);
+        $barcode = $barcode === '' ? null : $barcode;
+        $status = normalizeInventoryStatus($quantity, $itemStatus);
+
+        try {
+            $stmt = $pdo->prepare("
+                UPDATE inventory_items
+                SET barcode = ?, item_name = ?, quantity = ?, unit_price = ?, status = ?, updated_at = ?
+                WHERE id = ?
+            ");
+            $stmt->execute([$barcode, $itemName, $quantity, $unitPrice, $status, $updatedAt, $inventoryItemId]);
+
+            header('Location: ' . buildInventoryPageUrl([
+                'success' => 'تم تعديل بيانات الصنف بنجاح.',
+            ], 'inventory-form'));
+            exit;
+        } catch (PDOException $exception) {
+            if ($exception->getCode() === '23000' && $barcode !== null) {
+                $error = 'هذا الباركود مسجل بالفعل لصنف آخر.';
+            } else {
+                throw $exception;
+            }
+        }
+    }
+}
+
+if ($submittedAction === 'delete_inventory_item') {
+    $inventoryItemId = (int) ($_POST['item_id'] ?? 0);
+    $inventoryItem = fetchInventoryItemById($pdo, $inventoryItemId);
+
+    if ($inventoryItemId <= 0 || !$inventoryItem) {
+        $error = 'لم يتم العثور على الصنف المطلوب حذفه.';
+    } else {
+        $stmt = $pdo->prepare("DELETE FROM inventory_items WHERE id = ? LIMIT 1");
+        $stmt->execute([$inventoryItemId]);
+
+        header('Location: ' . buildInventoryPageUrl([
+            'success' => 'تم حذف الصنف بنجاح.',
+        ], 'inventory-items'));
+        exit;
     }
 }
 
@@ -318,8 +396,10 @@ if ($submittedAction === 'issue_inventory_item') {
     }
 }
 
-$selectedIssueId = (int) ($_GET['issue_id'] ?? ($selectedIssueId ?? 0));
+$selectedIssueId = (int) ($_GET['issue_id'] ?? $selectedIssueId);
+$selectedEditId = (int) ($_GET['edit_id'] ?? $selectedEditId);
 $selectedInventoryItem = fetchInventoryItemById($pdo, $selectedIssueId);
+$editingInventoryItem = fetchInventoryItemById($pdo, $selectedEditId);
 $inventoryItems = fetchInventoryItems($pdo);
 $issuedItems = fetchIssuedItems($pdo, $issuedSearch);
 $issuedSuggestions = fetchIssuedItemSuggestions($pdo);
@@ -347,6 +427,27 @@ $issuedQuantityValue = $submittedAction === 'issue_inventory_item' ? trim((strin
 $remainingStatusValue = $submittedAction === 'issue_inventory_item'
     ? trim((string) ($_POST['remaining_status'] ?? 'متبقي'))
     : 'متبقي';
+$inventoryFormAction = $editingInventoryItem ? 'edit_inventory_item' : 'add_inventory_item';
+$inventoryFormTitle = $editingInventoryItem ? 'تعديل الصنف' : 'تسجيل صنف جديد في المخزن';
+$inventoryFormHint = $editingInventoryItem
+    ? 'يمكن تعديل الباركود أو العدد أو السعر، وإذا تُرك العدد فارغًا سيبقى الصنف بدون عدد.'
+    : 'يمكن الحفظ بدون باركود أو بدون عدد.';
+$inventoryFormButton = $editingInventoryItem ? '💾 حفظ التعديلات' : '💾 حفظ الصنف';
+$inventoryBarcodeValue = $submittedAction === 'edit_inventory_item'
+    ? trim((string) ($_POST['barcode'] ?? ''))
+    : ($editingInventoryItem['barcode'] ?? ($submittedAction === 'add_inventory_item' ? ($_POST['barcode'] ?? '') : ''));
+$inventoryItemNameValue = $submittedAction === 'edit_inventory_item'
+    ? trim((string) ($_POST['item_name'] ?? ''))
+    : ($editingInventoryItem['item_name'] ?? ($submittedAction === 'add_inventory_item' ? ($_POST['item_name'] ?? '') : ''));
+$inventoryQuantityValue = $submittedAction === 'edit_inventory_item'
+    ? trim((string) ($_POST['quantity'] ?? ''))
+    : (($editingInventoryItem && $editingInventoryItem['quantity'] !== null) ? normalizeInventoryAmount($editingInventoryItem['quantity']) : ($submittedAction === 'add_inventory_item' ? ($_POST['quantity'] ?? '') : ''));
+$inventoryUnitPriceValue = $submittedAction === 'edit_inventory_item'
+    ? trim((string) ($_POST['unit_price'] ?? ''))
+    : (($editingInventoryItem && isset($editingInventoryItem['unit_price'])) ? normalizeInventoryAmount($editingInventoryItem['unit_price']) : ($submittedAction === 'add_inventory_item' ? ($_POST['unit_price'] ?? '') : ''));
+$inventoryStatusValue = $submittedAction === 'edit_inventory_item'
+    ? trim((string) ($_POST['item_status'] ?? 'متاح'))
+    : ($editingInventoryItem['status'] ?? 'متاح');
 $inventorySearchIndex = [];
 
 foreach ($issuedSuggestions as $suggestion) {
@@ -538,45 +639,66 @@ foreach ($issuedSuggestions as $suggestion) {
             </section>
         <?php endif; ?>
 
-        <section class="inventory-section">
+        <section class="inventory-section" id="inventory-form">
             <div class="supplier-layout">
                 <div class="form-card">
                     <div class="page-header">
-                        <h2>تسجيل صنف جديد في المخزن</h2>
-                        <span class="muted-text">يمكن الحفظ بدون باركود أو بدون عدد.</span>
+                        <h2><?php echo e($inventoryFormTitle); ?></h2>
+                        <div class="table-actions">
+                            <span class="muted-text"><?php echo e($inventoryFormHint); ?></span>
+                            <?php if ($editingInventoryItem): ?>
+                                <a class="inline-link small-link secondary-button" href="<?php echo e(buildInventoryPageUrl([], 'inventory-form')); ?>">إلغاء التعديل</a>
+                            <?php endif; ?>
+                        </div>
                     </div>
 
                     <form method="POST">
-                        <input type="hidden" name="form_action" value="add_inventory_item">
+                        <input type="hidden" name="form_action" value="<?php echo e($inventoryFormAction); ?>">
+                        <?php if ($editingInventoryItem): ?>
+                            <input type="hidden" name="item_id" value="<?php echo (int) $editingInventoryItem['id']; ?>">
+                        <?php endif; ?>
 
                         <div class="form-group">
                             <label>باركود الصنف</label>
-                            <input type="text" name="barcode" value="<?php echo e($submittedAction === 'add_inventory_item' ? ($_POST['barcode'] ?? '') : ''); ?>" placeholder="اختياري">
+                            <input type="text" name="barcode" value="<?php echo e($inventoryBarcodeValue); ?>" placeholder="اختياري">
                         </div>
 
                         <div class="form-group">
                             <label>اسم الصنف</label>
-                            <input type="text" name="item_name" value="<?php echo e($submittedAction === 'add_inventory_item' ? ($_POST['item_name'] ?? '') : ''); ?>" required>
+                            <input type="text" name="item_name" value="<?php echo e($inventoryItemNameValue); ?>" required>
                         </div>
 
                         <div class="form-group">
                             <label>العدد</label>
-                            <input type="number" step="0.01" min="0.01" name="quantity" value="<?php echo e($submittedAction === 'add_inventory_item' ? ($_POST['quantity'] ?? '') : ''); ?>" placeholder="اختياري">
+                            <input type="number" step="0.01" min="0" name="quantity" value="<?php echo e($inventoryQuantityValue); ?>" placeholder="اختياري">
                         </div>
 
                         <div class="form-group">
                             <label>السعر</label>
-                            <input type="number" step="0.01" min="0" name="unit_price" value="<?php echo e($submittedAction === 'add_inventory_item' ? ($_POST['unit_price'] ?? '') : ''); ?>" required>
+                            <input type="number" step="0.01" min="0" name="unit_price" value="<?php echo e($inventoryUnitPriceValue); ?>" required>
                         </div>
 
-                        <button type="submit">💾 حفظ الصنف</button>
+                        <?php if ($editingInventoryItem): ?>
+                            <div class="form-group select-group">
+                                <label>حالة الصنف</label>
+                                <select name="item_status">
+                                    <option value="متاح" <?php echo $inventoryStatusValue === 'متاح' ? 'selected' : ''; ?>>متاح</option>
+                                    <option value="منتهي" <?php echo $inventoryStatusValue === 'منتهي' ? 'selected' : ''; ?>>منتهي</option>
+                                </select>
+                                <p class="muted-text" style="margin: 8px 0 0;">
+                                    عند إدخال عدد أكبر من صفر سيبقى الصنف متاحًا تلقائيًا، وعند إدخال 0 سيظهر كمنتهي.
+                                </p>
+                            </div>
+                        <?php endif; ?>
+
+                        <button type="submit"><?php echo e($inventoryFormButton); ?></button>
                     </form>
                 </div>
 
-                <div class="table-card">
+                <div class="table-card" id="inventory-items">
                     <div class="page-header">
                         <h2>الأصناف المسجلة في المخزن</h2>
-                        <span class="muted-text">عند انتهاء الصنف سيظهر كمنتهي ولن يظهر له زر الصرف.</span>
+                        <span class="muted-text">يمكن الآن تعديل الصنف أو حذفه مباشرة من الجدول.</span>
                     </div>
 
                     <?php if ($inventoryItems): ?>
@@ -608,11 +730,17 @@ foreach ($issuedSuggestions as $suggestion) {
                                             </td>
                                             <td><?php echo (int) ($item['issued_times'] ?? 0); ?></td>
                                             <td>
-                                                <?php if ($isFinished): ?>
-                                                    <span class="muted-text">تم الصرف بالكامل</span>
-                                                <?php else: ?>
-                                                    <a class="inline-link small-link" href="<?php echo e(buildInventoryPageUrl(['issue_id' => (int) $item['id']])); ?>">صرف من المخزن</a>
-                                                <?php endif; ?>
+                                                <div class="table-actions">
+                                                    <?php if (!$isFinished): ?>
+                                                        <a class="inline-link small-link" href="<?php echo e(buildInventoryPageUrl(['issue_id' => (int) $item['id']])); ?>">صرف من المخزن</a>
+                                                    <?php endif; ?>
+                                                    <a class="inline-link small-link secondary-button" href="<?php echo e(buildInventoryPageUrl(['edit_id' => (int) $item['id']], 'inventory-form')); ?>">تعديل</a>
+                                                    <form method="POST" onsubmit="return confirm('سيتم حذف الصنف وكل سجل الصرف المرتبط به. هل أنت متأكد؟');">
+                                                        <input type="hidden" name="form_action" value="delete_inventory_item">
+                                                        <input type="hidden" name="item_id" value="<?php echo (int) $item['id']; ?>">
+                                                        <button type="submit" class="danger-button small-link">حذف</button>
+                                                    </form>
+                                                </div>
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>

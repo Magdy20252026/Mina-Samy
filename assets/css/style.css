@@ -189,6 +189,8 @@ a {
 
 .main-content {
     flex: 1;
+    min-width: 0;
+    width: 100%;
     padding: 24px;
 }
 
@@ -1018,10 +1020,24 @@ body.dark.dashboard-page .status-item {
     background: rgba(37, 99, 235, 0.18);
 }
 
+.danger-button {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.94), rgba(244, 63, 94, 0.9));
+    color: #fff;
+    box-shadow: none;
+}
+
+.danger-button:hover {
+    background: linear-gradient(135deg, rgba(220, 38, 38, 0.96), rgba(225, 29, 72, 0.92));
+}
+
 .table-actions {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
+}
+
+.table-actions form {
+    margin: 0;
 }
 
 .supplier-focus-card {
@@ -1106,11 +1122,13 @@ body.dark.dashboard-page .status-item {
 }
 
 .payment-history-table-wrap {
+    width: 100%;
     overflow-x: auto;
 }
 
 .compact-table {
     margin-top: 12px;
+    min-width: 720px;
 }
 
 .compact-table th,
@@ -1178,6 +1196,56 @@ body.dark.dashboard-page .status-item {
 
     .hero-meta-card,
     .dashboard-page .store-chip {
+        width: 100%;
+    }
+}
+
+@media (max-width: 640px) {
+    .sidebar {
+        padding: 18px 14px;
+    }
+
+    .main-content {
+        padding: 14px;
+    }
+
+    .topbar,
+    .table-card,
+    .form-card,
+    .login-card {
+        padding: 18px;
+        border-radius: 16px;
+    }
+
+    .brand,
+    .topbar-content h1 {
+        font-size: 24px;
+    }
+
+    .store-logo {
+        width: 76px;
+        height: 76px;
+    }
+
+    .cards,
+    .supplier-layout,
+    .supplier-management-grid,
+    .invoice-meta-grid,
+    .payment-method-grid,
+    .invoice-summary-strip,
+    .invoice-records-list,
+    .section-stack {
+        gap: 14px;
+    }
+
+    .table-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .table-actions .inline-link,
+    .table-actions button,
+    .secondary-button {
         width: 100%;
     }
 }
