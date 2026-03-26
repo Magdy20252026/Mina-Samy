@@ -466,7 +466,7 @@ if ($selectedSupplierId <= 0 || $selectedInvoiceId <= 0) {
                 <div class="empty-box">لم يتم تسجيل أي تسديدات على هذه الفاتورة حتى الآن.</div>
             <?php endif; ?>
 
-            <p class="thermal-only">تم تجهيز هذه الفاتورة للطباعة على رول كاشير حراري بعرض 80 مم.</p>
+            <p class="thermal-only">تم تجهيز هذه الفاتورة للطباعة على ورق كاشير حراري بعرض 80 مم.</p>
         <?php endif; ?>
     </div>
 </body>
