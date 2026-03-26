@@ -230,7 +230,7 @@ if ($selectedSupplierId <= 0 || $selectedInvoiceId <= 0) {
         }
     </style>
 </head>
-<body<?php echo $error === '' ? ' onload="window.print()"' : ''; ?>>
+<body>
     <div class="print-page">
         <div class="print-actions">
             <a class="button-link secondary" href="supplier_invoice_details.php?supplier_id=<?php echo (int) $selectedSupplierId; ?>&invoice_id=<?php echo (int) $selectedInvoiceId; ?>">⬅ الرجوع للتفاصيل</a>
