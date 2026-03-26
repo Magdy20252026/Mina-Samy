@@ -465,8 +465,8 @@ foreach ($issuedSuggestions as $suggestion) {
                     <strong><?php echo (int) ($inventoryStats['finished_inventory_items'] ?? 0); ?></strong>
                 </div>
                 <div class="summary-box">
-                    <p>عدد الأصناف الموجودة في قسم الأصناف</p>
-                    <strong><?php echo (int) ($issuedStats['total_issued_records'] ?? 0); ?></strong>
+                    <p>عدد الأصناف المصروفة</p>
+                    <strong><?php echo (int) ($issuedStats['total_issued_items'] ?? 0); ?></strong>
                 </div>
             </div>
         </section>
@@ -629,7 +629,7 @@ foreach ($issuedSuggestions as $suggestion) {
         <section class="inventory-section" id="issued-items">
             <div class="table-card">
                 <div class="page-header">
-                    <h2>الأصناف الموجودة في قسم الأصناف</h2>
+                    <h2>سجل الأصناف المصروفة</h2>
                     <span class="muted-text">يمكن البحث بالباركود أو باسم الصنف مع اقتراحات تبدأ من أول حرفين.</span>
                 </div>
 
