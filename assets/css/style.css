@@ -11,6 +11,7 @@
     --success: #10b981;
     --danger: #ef4444;
     --shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+    --mobile-table-min-width: 560px;
 }
 
 body.dark {
@@ -1290,6 +1291,6 @@ body.dark.dashboard-page .status-item {
     }
 
     .table-card table {
-        min-width: 560px;
+        min-width: var(--mobile-table-min-width);
     }
 }
