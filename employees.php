@@ -23,6 +23,11 @@ $employeeName = '';
 $employeeSalary = '';
 $editingEmployeeId = 0;
 $success = trim((string) ($_GET['success'] ?? ''));
+$statusError = trim((string) ($_GET['error'] ?? ''));
+
+if ($statusError === 'delete_missing') {
+    $error = 'الموظف المطلوب حذفه غير موجود';
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $formAction = trim((string) ($_POST['form_action'] ?? ''));
@@ -78,7 +83,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $employeeId = (int) ($_POST['employee_id'] ?? 0);
 
         if ($employeeId <= 0) {
-            $error = 'تعذر تحديد الموظف المطلوب حذفه';
+            header('Location: employees.php?error=delete_missing');
+            exit;
         } else {
             $stmt = $pdo->prepare("DELETE FROM employees WHERE id = ?");
             $stmt->execute([$employeeId]);
@@ -88,7 +94,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 exit;
             }
 
-            $error = 'الموظف المطلوب حذفه غير موجود';
+            header('Location: employees.php?error=delete_missing');
+            exit;
         }
     }
 }
@@ -170,7 +177,7 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <div class="page-header">
                 <div>
                     <h2><?php echo $editingEmployeeId > 0 ? 'تعديل بيانات الموظف' : 'إضافة موظف جديد'; ?></h2>
-                    <p>بعد الإضافة أو التعديل أو الحذف سيتم مسح الحقول تلقائيًا.</p>
+                    <p>سيتم تحديث النموذج بعد كل عملية إضافة أو تعديل أو حذف.</p>
                 </div>
 
                 <?php if ($editingEmployeeId > 0): ?>
@@ -205,7 +212,7 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                 <div class="form-group">
                     <label for="salary">راتب الموظف</label>
-                    <p id="salary_help">أدخل الراتب بالأرقام ويمكن إضافة خانتين عشريتين عند الحاجة.</p>
+                    <small id="salary_help">أدخل الراتب بالأرقام ويمكن إضافة خانتين عشريتين عند الحاجة.</small>
                     <input id="salary" type="number" name="salary" min="0" step="0.01" aria-describedby="salary_help" value="<?php echo e($employeeSalary); ?>" required>
                 </div>
 
