@@ -14,6 +14,19 @@ $stats = $stmtUsers->fetch(PDO::FETCH_ASSOC) ?: [];
 $totalUsers = (int) ($stats['total_users'] ?? 0);
 $totalManagers = (int) ($stats['total_managers'] ?? 0);
 $totalSupervisors = (int) ($stats['total_supervisors'] ?? 0);
+
+$totalSuppliers = 0;
+
+try {
+    $stmtSuppliers = $pdo->query("
+        SELECT COUNT(*) AS total_suppliers
+        FROM suppliers
+    ");
+    $supplierStats = $stmtSuppliers->fetch(PDO::FETCH_ASSOC) ?: [];
+    $totalSuppliers = (int) ($supplierStats['total_suppliers'] ?? 0);
+} catch (PDOException $exception) {
+    $totalSuppliers = 0;
+}
 ?>
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -109,6 +122,17 @@ $totalSupervisors = (int) ($stats['total_supervisors'] ?? 0);
                 </div>
                 <div class="stat-number"><?php echo $totalSupervisors; ?></div>
                 <p>إجمالي المستخدمين بصلاحية مشرف</p>
+            </div>
+            <div class="card stat-card stat-card-suppliers">
+                <div class="stat-card-head">
+                    <div>
+                        <span class="stat-kicker">إدارة الموارد</span>
+                        <h3>عدد الموردين</h3>
+                    </div>
+                    <span class="stat-icon">🚚</span>
+                </div>
+                <div class="stat-number"><?php echo $totalSuppliers; ?></div>
+                <p>عدد الموردين الفعلي المسجل في الموردين</p>
             </div>
         </div>
 
