@@ -90,21 +90,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = 'تعذر تحديد الموظف المطلوب صرف راتبه';
         } else {
             $selectedEmployee = getEmployeeForSalaryPayment($pdo, $employeeId, $currentMonthKey);
-        }
-
-        if ($error === '' && !$selectedEmployee) {
-            $error = 'الموظف المطلوب غير موجود';
-        } elseif ($paymentAmount === '') {
-            $error = 'قيمة الراتب المصروف مطلوبة';
-        } elseif (!is_numeric($paymentAmount)) {
-            $error = 'أدخل قيمة صحيحة للراتب المصروف';
-        } else {
-            $amountValue = (float) $paymentAmount;
-
-            if ($amountValue <= 0) {
-                $error = 'قيمة الراتب المصروف يجب أن تكون أكبر من صفر';
+            if (!$selectedEmployee) {
+                $error = 'الموظف المطلوب غير موجود';
+            } elseif ($paymentAmount === '') {
+                $error = 'قيمة الراتب المصروف مطلوبة';
+            } elseif (!is_numeric($paymentAmount)) {
+                $error = 'أدخل قيمة صحيحة للراتب المصروف';
             } else {
-                if (!empty($selectedEmployee['payment_id'])) {
+                $amountValue = (float) $paymentAmount;
+
+                if ($amountValue <= 0) {
+                    $error = 'قيمة الراتب المصروف يجب أن تكون أكبر من صفر';
+                } elseif (!empty($selectedEmployee['payment_id'])) {
                     $error = 'تم صرف راتب هذا الموظف بالفعل خلال الشهر الحالي';
                 } else {
                     $paidAt = getEgyptDateTimeValue();
@@ -253,7 +250,7 @@ $unpaidEmployeesCount = count($unpaidEmployees);
                     </div>
                     <span class="stat-icon">✅</span>
                 </div>
-                <div class="stat-number"><?php echo $paidEmployeesCount; ?></div>
+                <div class="stat-number"><?php echo e((string) $paidEmployeesCount); ?></div>
                 <p>موظف تم صرف راتبه هذا الشهر</p>
             </div>
             <div class="card stat-card stat-card-supervisors">
@@ -264,7 +261,7 @@ $unpaidEmployeesCount = count($unpaidEmployees);
                     </div>
                     <span class="stat-icon">⏳</span>
                 </div>
-                <div class="stat-number"><?php echo $unpaidEmployeesCount; ?></div>
+                <div class="stat-number"><?php echo e((string) $unpaidEmployeesCount); ?></div>
                 <p>موظف لم يتم صرف راتبه خلال شهر <?php echo e($currentMonthLabel); ?></p>
             </div>
         </div>
@@ -334,7 +331,7 @@ $unpaidEmployeesCount = count($unpaidEmployees);
         <div class="table-card" style="margin-top: 24px;">
             <div class="page-header">
                 <div>
-                    <h2>جدول الموظفين الذين لم يقبضوا خلال الشهر</h2>
+                    <h2>جدول الموظفين الذين لم يتم صرف رواتبهم خلال الشهر</h2>
                     <p>يعرض الموظفين الذين لم يتم صرف راتب لهم خلال شهر <?php echo e($currentMonthLabel); ?>.</p>
                 </div>
             </div>
@@ -376,7 +373,7 @@ $unpaidEmployeesCount = count($unpaidEmployees);
         <div class="table-card" style="margin-top: 24px;">
             <div class="page-header">
                 <div>
-                    <h2>جدول الموظفين الذين تم قبضهم خلال الشهر</h2>
+                    <h2>جدول الموظفين الذين تم صرف رواتبهم خلال الشهر</h2>
                     <p>يعرض الموظفين الذين تم صرف رواتبهم خلال شهر <?php echo e($currentMonthLabel); ?>.</p>
                 </div>
             </div>
