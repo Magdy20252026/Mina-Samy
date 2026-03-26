@@ -221,8 +221,6 @@ if ($selectedSupplierId <= 0 || $selectedInvoiceId <= 0) {
 
             body {
                 background: #ffffff;
-                width: 80mm;
-                margin: 0 auto;
                 font-size: 11px;
             }
 
