@@ -7,7 +7,7 @@ function ensureEmployeesTable(PDO $pdo)
 {
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS employees (
-            id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
             employee_name VARCHAR(255) NOT NULL,
             salary DECIMAL(12,2) NOT NULL DEFAULT 0.00,
             created_at DATETIME NOT NULL,
@@ -170,7 +170,7 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <div class="page-header">
                 <div>
                     <h2><?php echo $editingEmployeeId > 0 ? 'تعديل بيانات الموظف' : 'إضافة موظف جديد'; ?></h2>
-                    <p>بعد الإضافة أو التعديل أو الحذف سيتم تصفية الحقول تلقائيًا.</p>
+                    <p>بعد الإضافة أو التعديل أو الحذف سيتم مسح الحقول تلقائيًا.</p>
                 </div>
 
                 <?php if ($editingEmployeeId > 0): ?>
@@ -205,7 +205,8 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                 <div class="form-group">
                     <label for="salary">راتب الموظف</label>
-                    <input id="salary" type="number" name="salary" min="0" step="0.01" value="<?php echo e($employeeSalary); ?>" required>
+                    <p id="salary_help">أدخل الراتب بالأرقام ويمكن إضافة خانتين عشريتين عند الحاجة.</p>
+                    <input id="salary" type="number" name="salary" min="0" step="0.01" aria-describedby="salary_help" value="<?php echo e($employeeSalary); ?>" required>
                 </div>
 
                 <button type="submit"><?php echo $editingEmployeeId > 0 ? '💾 حفظ التعديل' : '💾 إضافة الموظف'; ?></button>
