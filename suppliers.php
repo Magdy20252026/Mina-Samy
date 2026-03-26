@@ -3,12 +3,21 @@ require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/config/db.php';
 require_once __DIR__ . '/includes/functions.php';
 
+$supplierPageMode = isset($supplierPageMode) && is_string($supplierPageMode)
+    ? trim($supplierPageMode)
+    : 'suppliers';
+$allowedSupplierPageModes = ['suppliers', 'invoice_create', 'supplier_invoices', 'invoice_details'];
+
+if (!in_array($supplierPageMode, $allowedSupplierPageModes, true)) {
+    $supplierPageMode = 'suppliers';
+}
+
 $paymentMethods = ['شيكات', 'فيزا', 'انستاباي', 'فودافون كاش', 'كاش'];
 $paymentOptions = ['وسيلة واحدة', 'وسيلتين دفع'];
 $paymentStatuses = ['مدفوعة', 'أجل', 'نصف مدفوعة'];
 $error = '';
-$success = trim($_GET['success'] ?? '');
-$submittedAction = trim($_POST['form_action'] ?? '');
+$success = trim((string) ($_GET['success'] ?? ''));
+$submittedAction = trim((string) ($_POST['form_action'] ?? ''));
 
 function ensureSupplierTables(PDO $pdo)
 {
@@ -69,13 +78,124 @@ function amountsMatch($first, $second)
     return abs((float) $first - (float) $second) < 0.01;
 }
 
-function supplierUrl(array $params = [])
+function buildSupplierPageUrl($path, array $params = [], $fragment = '')
 {
-    if ($params === []) {
-        return 'suppliers.php';
+    $url = $path;
+
+    if ($params !== []) {
+        $url .= '?' . http_build_query($params);
     }
 
-    return 'suppliers.php?' . http_build_query($params);
+    $fragment = ltrim((string) $fragment, '#');
+    if ($fragment !== '') {
+        $url .= '#' . rawurlencode($fragment);
+    }
+
+    return $url;
+}
+
+function appendSupplierUrlParams($url, array $params)
+{
+    $parts = parse_url($url);
+
+    if ($parts === false) {
+        return supplierListPageUrl($params);
+    }
+
+    $queryParams = [];
+
+    if (isset($parts['query'])) {
+        parse_str($parts['query'], $queryParams);
+    }
+
+    foreach ($params as $key => $value) {
+        $queryParams[$key] = $value;
+    }
+
+    $rebuiltUrl = (string) ($parts['path'] ?? 'suppliers.php');
+
+    if ($queryParams !== []) {
+        $rebuiltUrl .= '?' . http_build_query($queryParams);
+    }
+
+    if (!empty($parts['fragment'])) {
+        $rebuiltUrl .= '#' . $parts['fragment'];
+    }
+
+    return $rebuiltUrl;
+}
+
+function sanitizeSupplierReturnUrl($value, $defaultUrl)
+{
+    $value = trim((string) $value);
+
+    if ($value === '' || preg_match('/[\r\n]/', $value)) {
+        return $defaultUrl;
+    }
+
+    $parts = parse_url($value);
+
+    if (
+        $parts === false
+        || isset($parts['scheme'])
+        || isset($parts['host'])
+        || isset($parts['user'])
+        || isset($parts['pass'])
+        || isset($parts['port'])
+    ) {
+        return $defaultUrl;
+    }
+
+    $path = trim((string) ($parts['path'] ?? ''));
+    $allowedPaths = [
+        'suppliers.php',
+        'supplier_invoice_create.php',
+        'supplier_invoices.php',
+        'supplier_invoice_details.php',
+    ];
+
+    if ($path === '' || $path !== basename($path) || !in_array($path, $allowedPaths, true)) {
+        return $defaultUrl;
+    }
+
+    $sanitizedUrl = $path;
+
+    if (!empty($parts['query'])) {
+        $sanitizedUrl .= '?' . $parts['query'];
+    }
+
+    if (!empty($parts['fragment'])) {
+        $sanitizedUrl .= '#' . rawurlencode((string) $parts['fragment']);
+    }
+
+    return $sanitizedUrl;
+}
+
+function supplierListPageUrl(array $params = [])
+{
+    return buildSupplierPageUrl('suppliers.php', $params);
+}
+
+function supplierInvoiceCreatePageUrl($supplierId, array $params = [])
+{
+    return buildSupplierPageUrl('supplier_invoice_create.php', array_merge([
+        'supplier_id' => (int) $supplierId,
+    ], $params));
+}
+
+function supplierInvoicesPageUrl($supplierId, array $params = [])
+{
+    return buildSupplierPageUrl('supplier_invoices.php', array_merge([
+        'supplier_id' => (int) $supplierId,
+    ], $params));
+}
+
+function supplierInvoiceDetailsPageUrl($supplierId, $invoiceId, array $params = [])
+{
+    return buildSupplierPageUrl('supplier_invoice_details.php', array_merge([
+        'supplier_id' => (int) $supplierId,
+        'invoice_id' => (int) $invoiceId,
+    ], $params));
 }
 
 function getSupplierById(PDO $pdo, $supplierId)
@@ -231,12 +351,52 @@ ensureSupplierTables($pdo);
 
 $selectedSupplierId = (int) ($_GET['supplier_id'] ?? $_POST['supplier_id'] ?? 0);
 $selectedInvoiceId = (int) ($_GET['invoice_id'] ?? $_POST['invoice_id'] ?? 0);
-$selectedView = trim((string) ($_GET['view'] ?? $_POST['view'] ?? 'overview'));
-$allowedViews = ['overview', 'invoice', 'invoices'];
+$legacyView = trim((string) ($_GET['view'] ?? ''));
 
-if (!in_array($selectedView, $allowedViews, true)) {
-    $selectedView = 'overview';
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && $supplierPageMode === 'suppliers') {
+    if ($selectedSupplierId > 0 && $selectedInvoiceId > 0) {
+        header('Location: ' . supplierInvoiceDetailsPageUrl($selectedSupplierId, $selectedInvoiceId, array_filter([
+            'back' => supplierInvoicesPageUrl($selectedSupplierId, ['back' => supplierListPageUrl()]),
+            'success' => $success !== '' ? $success : null,
+        ], static function ($value) {
+            return $value !== null && $value !== '';
+        })));
+        exit;
+    }
+
+    if ($selectedSupplierId > 0 && $legacyView === 'invoice') {
+        header('Location: ' . supplierInvoiceCreatePageUrl($selectedSupplierId, array_filter([
+            'back' => supplierListPageUrl(),
+            'success' => $success !== '' ? $success : null,
+        ], static function ($value) {
+            return $value !== null && $value !== '';
+        })));
+        exit;
+    }
+
+    if ($selectedSupplierId > 0 && $legacyView === 'invoices') {
+        header('Location: ' . supplierInvoicesPageUrl($selectedSupplierId, array_filter([
+            'back' => supplierListPageUrl(),
+            'success' => $success !== '' ? $success : null,
+        ], static function ($value) {
+            return $value !== null && $value !== '';
+        })));
+        exit;
+    }
 }
+
+$invoiceListBaseUrl = $selectedSupplierId > 0
+    ? supplierInvoicesPageUrl($selectedSupplierId)
+    : supplierListPageUrl();
+$invoiceCreateBackUrl = sanitizeSupplierReturnUrl(
+    $_GET['back'] ?? $_POST['return_to'] ?? '',
+    $invoiceListBaseUrl
+);
+$invoiceListBackUrl = sanitizeSupplierReturnUrl($_GET['back'] ?? '', supplierListPageUrl());
+$invoiceDetailsBackUrl = sanitizeSupplierReturnUrl(
+    $_GET['back'] ?? $_POST['return_to'] ?? '',
+    $invoiceListBaseUrl
+);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($submittedAction === 'add_supplier') {
@@ -254,9 +414,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 $stmt = $pdo->prepare("INSERT INTO suppliers (name, phone, created_at) VALUES (?, ?, ?)");
                 $stmt->execute([$supplierName, $supplierPhone, getEgyptDateTimeValue()]);
-                $newSupplierId = (int) $pdo->lastInsertId();
-                header('Location: ' . supplierUrl([
-                    'supplier_id' => $newSupplierId,
+
+                header('Location: ' . supplierListPageUrl([
                     'success' => 'تم حفظ المورد بنجاح',
                 ]));
                 exit;
@@ -264,6 +423,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     } elseif ($submittedAction === 'add_invoice') {
         $selectedSupplierId = (int) ($_POST['supplier_id'] ?? 0);
+        $invoiceCreateBackUrl = sanitizeSupplierReturnUrl(
+            $_POST['return_to'] ?? '',
+            $selectedSupplierId > 0 ? supplierInvoicesPageUrl($selectedSupplierId) : supplierListPageUrl()
+        );
         $supplier = getSupplierById($pdo, $selectedSupplierId);
 
         if (!$supplier) {
@@ -389,10 +552,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                         $pdo->commit();
 
-                        header('Location: ' . supplierUrl([
-                            'supplier_id' => $selectedSupplierId,
+                        header('Location: ' . appendSupplierUrlParams($invoiceCreateBackUrl, [
                             'success' => 'تم حفظ فاتورة المورد بنجاح',
-                        ]) . '#selected-supplier-focus');
+                        ]));
                         exit;
                     } catch (Throwable $throwable) {
                         if ($pdo->inTransaction()) {
@@ -407,6 +569,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($submittedAction === 'add_payment') {
         $selectedSupplierId = (int) ($_POST['supplier_id'] ?? 0);
         $selectedInvoiceId = (int) ($_POST['invoice_id'] ?? 0);
+        $invoiceDetailsBackUrl = sanitizeSupplierReturnUrl(
+            $_POST['return_to'] ?? '',
+            $selectedSupplierId > 0 ? supplierInvoicesPageUrl($selectedSupplierId) : supplierListPageUrl()
+        );
 
         $invoiceStmt = $pdo->prepare("
             SELECT id, supplier_id, total_amount, amount_paid, amount_due
@@ -475,10 +641,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                             $pdo->commit();
 
-                            header('Location: ' . supplierUrl([
-                                'supplier_id' => $selectedSupplierId,
-                                'invoice_id' => $selectedInvoiceId,
-                                'view' => 'invoices',
+                            header('Location: ' . supplierInvoiceDetailsPageUrl($selectedSupplierId, $selectedInvoiceId, [
+                                'back' => $invoiceDetailsBackUrl,
                                 'success' => 'تم تسجيل عملية التسديد بنجاح',
                             ]));
                             exit;
@@ -496,39 +660,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$suppliersStmt = $pdo->query("
-    SELECT
-        s.id,
-        s.name,
-        s.phone,
-        s.created_at,
-        COALESCE(SUM(si.amount_due), 0) AS balance,
-        COUNT(si.id) AS total_invoices
-    FROM suppliers s
-    LEFT JOIN supplier_invoices si ON si.supplier_id = s.id
-    GROUP BY s.id, s.name, s.phone, s.created_at
-    ORDER BY s.id DESC
-");
-$suppliers = $suppliersStmt->fetchAll(PDO::FETCH_ASSOC);
+$suppliers = [];
+$totalSuppliersBalance = 0.00;
+$unpaidInvoicesCount = 0;
 
-$supplierStatsStmt = $pdo->query("
-    SELECT
-        COALESCE(SUM(amount_due), 0) AS total_balance,
-        COUNT(CASE WHEN amount_due > 0 THEN 1 END) AS unpaid_invoices_count
-    FROM supplier_invoices
-");
-$supplierStats = $supplierStatsStmt->fetch(PDO::FETCH_ASSOC);
-$totalSuppliersBalance = normalizeAmount($supplierStats['total_balance'] ?? 0);
-$unpaidInvoicesCount = (int) ($supplierStats['unpaid_invoices_count'] ?? 0);
+if ($supplierPageMode === 'suppliers') {
+    $suppliersStmt = $pdo->query("
+        SELECT
+            s.id,
+            s.name,
+            s.phone,
+            s.created_at,
+            COALESCE(SUM(si.amount_due), 0) AS balance,
+            COUNT(si.id) AS total_invoices
+        FROM suppliers s
+        LEFT JOIN supplier_invoices si ON si.supplier_id = s.id
+        GROUP BY s.id, s.name, s.phone, s.created_at
+        ORDER BY s.id DESC
+    ");
+    $suppliers = $suppliersStmt->fetchAll(PDO::FETCH_ASSOC);
 
-$selectedSupplier = getSupplierById($pdo, $selectedSupplierId);
-
-if (!$selectedSupplier) {
-    $selectedSupplierId = 0;
-    $selectedInvoiceId = 0;
-    $selectedView = 'overview';
+    $supplierStatsStmt = $pdo->query("
+        SELECT
+            COALESCE(SUM(amount_due), 0) AS total_balance,
+            COUNT(CASE WHEN amount_due > 0 THEN 1 END) AS unpaid_invoices_count
+        FROM supplier_invoices
+    ");
+    $supplierStats = $supplierStatsStmt->fetch(PDO::FETCH_ASSOC);
+    $totalSuppliersBalance = normalizeAmount($supplierStats['total_balance'] ?? 0);
+    $unpaidInvoicesCount = (int) ($supplierStats['unpaid_invoices_count'] ?? 0);
 }
 
+$selectedSupplier = getSupplierById($pdo, $selectedSupplierId);
 $supplierInvoices = [];
 $supplierInvoicePayments = [];
 $supplierInvoicePaymentsByInvoice = [];
@@ -536,7 +699,16 @@ $selectedInvoice = null;
 $selectedInvoiceItems = [];
 $selectedInvoicePayments = [];
 
-if ($selectedSupplierId > 0) {
+if (
+    !$selectedSupplier
+    && $selectedSupplierId > 0
+    && in_array($supplierPageMode, ['invoice_create', 'supplier_invoices', 'invoice_details'], true)
+    && $error === ''
+) {
+    $error = 'المورد المحدد غير موجود';
+}
+
+if ($selectedSupplierId > 0 && $selectedSupplier) {
     $invoiceListStmt = $pdo->prepare("
         SELECT id, payment_status, total_amount, amount_paid, amount_due, created_at, updated_at
         FROM supplier_invoices
@@ -564,7 +736,7 @@ if ($selectedSupplierId > 0) {
     }
 }
 
-if ($selectedSupplierId > 0 && $selectedInvoiceId > 0) {
+if ($selectedSupplierId > 0 && $selectedInvoiceId > 0 && $selectedSupplier) {
     $invoiceDetailsStmt = $pdo->prepare("
         SELECT id, supplier_id, payment_status, total_amount, amount_paid, amount_due, created_at, updated_at
         FROM supplier_invoices
@@ -592,13 +764,11 @@ if ($selectedSupplierId > 0 && $selectedInvoiceId > 0) {
         ");
         $paymentsStmt->execute([$selectedInvoiceId]);
         $selectedInvoicePayments = $paymentsStmt->fetchAll(PDO::FETCH_ASSOC);
-    } else {
-        $selectedInvoiceId = 0;
+    } elseif ($supplierPageMode === 'invoice_details' && $error === '') {
+        $error = 'الفاتورة المحددة غير موجودة';
     }
 }
 
-$showInvoiceForm = $selectedSupplier && ($selectedView === 'invoice' || $submittedAction === 'add_invoice');
-$showSupplierInvoices = $selectedSupplier && ($selectedView === 'invoices' || $selectedInvoiceId > 0 || $submittedAction === 'add_payment');
 $supplierInvoicesCount = count($supplierInvoices);
 $settledInvoicesCount = 0;
 $openInvoicesCount = 0;
@@ -657,13 +827,43 @@ $settlementPaymentOneValue = $submittedAction === 'add_payment' ? trim((string) 
 $settlementPaymentTwoValue = $submittedAction === 'add_payment' ? trim((string) ($_POST['payment_method_two'] ?? '')) : '';
 $settlementPaymentAmountOneValue = $submittedAction === 'add_payment' ? trim((string) ($_POST['payment_amount_one'] ?? '')) : '';
 $settlementPaymentAmountTwoValue = $submittedAction === 'add_payment' ? trim((string) ($_POST['payment_amount_two'] ?? '')) : '';
+
+$isSuppliersPage = $supplierPageMode === 'suppliers';
+$isInvoiceCreatePage = $supplierPageMode === 'invoice_create';
+$isInvoiceListPage = $supplierPageMode === 'supplier_invoices';
+$isInvoiceDetailsPage = $supplierPageMode === 'invoice_details';
+
+$currentInvoiceListUrl = $selectedSupplierId > 0
+    ? supplierInvoicesPageUrl($selectedSupplierId, ['back' => $invoiceListBackUrl])
+    : supplierListPageUrl();
+$pageTitle = 'الموردين';
+$pageDescription = 'تسجيل الموردين وعرض جدول الموردين في صفحة مستقلة ومنظمة.';
+$pageChip = '🚚 إدارة الموردين';
+$pageBackUrl = supplierListPageUrl();
+
+if ($isInvoiceCreatePage) {
+    $pageTitle = 'إضافة فاتورة مورد';
+    $pageDescription = 'إنشاء فاتورة مورد في صفحة مستقلة مع إمكانية الرجوع للصفحة السابقة بعد الحفظ.';
+    $pageChip = '🧾 إضافة فاتورة';
+    $pageBackUrl = $invoiceCreateBackUrl;
+} elseif ($isInvoiceListPage) {
+    $pageTitle = 'فواتير المورد';
+    $pageDescription = 'عرض فواتير المورد في صفحة منفصلة ومنظمة مع الوصول لتفاصيل كل فاتورة.';
+    $pageChip = '📚 فواتير المورد';
+    $pageBackUrl = $invoiceListBackUrl;
+} elseif ($isInvoiceDetailsPage) {
+    $pageTitle = 'تفاصيل فاتورة المورد';
+    $pageDescription = 'عرض تفاصيل الفاتورة وسجل التسديدات في صفحة مستقلة مع رجوع مباشر.';
+    $pageChip = '📄 تفاصيل الفاتورة';
+    $pageBackUrl = $invoiceDetailsBackUrl;
+}
 ?>
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>الموردين - <?php echo e($store['name']); ?></title>
+    <title><?php echo e($pageTitle); ?> - <?php echo e($store['name']); ?></title>
     <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
@@ -699,11 +899,11 @@ $settlementPaymentAmountTwoValue = $submittedAction === 'add_payment' ? trim((st
     <main class="main-content">
         <header class="topbar">
             <div class="topbar-content">
-                <h1>الموردين</h1>
-                <p>تسجيل الموردين، إضافة فواتير متعددة الأصناف، ومتابعة الرصيد والتسديدات السابقة بتوقيت جمهورية مصر العربية.</p>
+                <h1><?php echo e($pageTitle); ?></h1>
+                <p><?php echo e($pageDescription); ?></p>
             </div>
             <div class="store-chip">
-                <span>🧾 إدارة فواتير الموردين</span>
+                <span><?php echo e($pageChip); ?></span>
             </div>
         </header>
 
@@ -715,374 +915,370 @@ $settlementPaymentAmountTwoValue = $submittedAction === 'add_payment' ? trim((st
             <div class="alert alert-success"><?php echo e($success); ?></div>
         <?php endif; ?>
 
-        <div class="invoice-meta-grid" style="margin-bottom: 1.5rem;">
-            <div class="summary-box">
-                <p>إجمالي رصيد الموردين</p>
-                <strong><?php echo e(formatMoney($totalSuppliersBalance)); ?> ج.م</strong>
-            </div>
-            <div class="summary-box">
-                <p>عدد الفواتير غير المدفوعة</p>
-                <strong><?php echo e($unpaidInvoicesCount); ?></strong>
-            </div>
-        </div>
-
-        <div class="supplier-layout">
-            <div class="form-card">
-                <div class="page-header">
-                    <h2>إضافة مورد جديد</h2>
-                    <span class="muted-text">سجّل المورد أولًا ثم اختر من الجدول الإجراء المطلوب.</span>
+        <?php if ($isSuppliersPage): ?>
+            <div class="invoice-meta-grid" style="margin-bottom: 1.5rem;">
+                <div class="summary-box">
+                    <p>إجمالي رصيد الموردين</p>
+                    <strong><?php echo e(formatMoney($totalSuppliersBalance)); ?> ج.م</strong>
                 </div>
+                <div class="summary-box">
+                    <p>عدد الفواتير غير المدفوعة</p>
+                    <strong><?php echo e($unpaidInvoicesCount); ?></strong>
+                </div>
+            </div>
 
-                <form method="POST">
-                    <input type="hidden" name="form_action" value="add_supplier">
-
-                    <div class="form-group">
-                        <label>اسم المورد</label>
-                        <input type="text" name="supplier_name" value="<?php echo e($submittedAction === 'add_supplier' ? ($_POST['supplier_name'] ?? '') : ''); ?>" required>
+            <div class="supplier-layout">
+                <div class="form-card">
+                    <div class="page-header">
+                        <h2>إضافة مورد جديد</h2>
+                        <span class="muted-text">سجّل المورد أولًا، ثم انتقل إلى صفحة الفواتير أو إنشاء فاتورة من الجدول.</span>
                     </div>
 
-                    <div class="form-group">
-                        <label>رقم التليفون</label>
-                        <input type="text" name="supplier_phone" value="<?php echo e($submittedAction === 'add_supplier' ? ($_POST['supplier_phone'] ?? '') : ''); ?>" required>
-                    </div>
+                    <form method="POST">
+                        <input type="hidden" name="form_action" value="add_supplier">
 
-                    <button type="submit">💾 حفظ المورد</button>
-                </form>
-            </div>
+                        <div class="form-group">
+                            <label>اسم المورد</label>
+                            <input type="text" name="supplier_name" value="<?php echo e($submittedAction === 'add_supplier' ? ($_POST['supplier_name'] ?? '') : ''); ?>" required>
+                        </div>
 
-            <div class="table-card">
-                <div class="page-header">
-                    <h2>الموردون المسجلون</h2>
-                    <span class="muted-text">إجمالي الموردين: <?php echo count($suppliers); ?></span>
+                        <div class="form-group">
+                            <label>رقم التليفون</label>
+                            <input type="text" name="supplier_phone" value="<?php echo e($submittedAction === 'add_supplier' ? ($_POST['supplier_phone'] ?? '') : ''); ?>" required>
+                        </div>
+
+                        <button type="submit">💾 حفظ المورد</button>
+                    </form>
                 </div>
 
-                <?php if ($suppliers): ?>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>اسم المورد</th>
-                                <th>رقم التليفون</th>
-                                <th>رصيد المورد</th>
-                                <th>الفواتير</th>
-                                <th>الإجراءات</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($suppliers as $supplier): ?>
+                <div class="table-card">
+                    <div class="page-header">
+                        <h2>الموردون المسجلون</h2>
+                        <span class="muted-text">إجمالي الموردين: <?php echo count($suppliers); ?></span>
+                    </div>
+
+                    <?php if ($suppliers): ?>
+                        <table>
+                            <thead>
                                 <tr>
-                                    <td><?php echo e($supplier['name']); ?></td>
-                                    <td><?php echo e($supplier['phone']); ?></td>
-                                    <td><?php echo e(formatMoney($supplier['balance'])); ?> ج.م</td>
-                                    <td><?php echo (int) $supplier['total_invoices']; ?></td>
-                                    <td>
-                                        <div class="table-actions">
-                                            <a class="inline-link small-link" href="<?php echo e(supplierUrl([
-                                                'supplier_id' => (int) $supplier['id'],
-                                                'view' => 'invoice',
-                                            ])); ?>#invoice-form">إضافة فاتورة</a>
-                                            <a class="inline-link small-link" href="<?php echo e(supplierUrl([
-                                                'supplier_id' => (int) $supplier['id'],
-                                                'view' => 'invoices',
-                                            ])); ?>#supplier-invoices">عرض الفواتير السابقة</a>
-                                        </div>
-                                    </td>
+                                    <th>اسم المورد</th>
+                                    <th>رقم التليفون</th>
+                                    <th>رصيد المورد</th>
+                                    <th>الفواتير</th>
+                                    <th>الإجراءات</th>
                                 </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                <?php else: ?>
-                    <p class="muted-text">لا يوجد موردون مسجلون حتى الآن.</p>
-                <?php endif; ?>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($suppliers as $supplier): ?>
+                                    <tr>
+                                        <td><?php echo e($supplier['name']); ?></td>
+                                        <td><?php echo e($supplier['phone']); ?></td>
+                                        <td><?php echo e(formatMoney($supplier['balance'])); ?> ج.م</td>
+                                        <td><?php echo (int) $supplier['total_invoices']; ?></td>
+                                        <td>
+                                            <div class="table-actions">
+                                                <a class="inline-link small-link" href="<?php echo e(supplierInvoiceCreatePageUrl((int) $supplier['id'], [
+                                                    'back' => supplierListPageUrl(),
+                                                ])); ?>">إضافة فاتورة</a>
+                                                <a class="inline-link small-link" href="<?php echo e(supplierInvoicesPageUrl((int) $supplier['id'], [
+                                                    'back' => supplierListPageUrl(),
+                                                ])); ?>">عرض الفواتير السابقة</a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    <?php else: ?>
+                        <p class="muted-text">لا يوجد موردون مسجلون حتى الآن.</p>
+                    <?php endif; ?>
+                </div>
             </div>
-        </div>
-
-        <?php if ($selectedSupplier): ?>
-            <div class="table-card supplier-focus-card" id="selected-supplier-focus">
+        <?php else: ?>
+            <div class="table-card supplier-focus-card">
                 <div class="supplier-focus-header">
                     <div>
                         <div class="page-header">
-                            <h2>المورد المختار: <?php echo e($selectedSupplier['name']); ?></h2>
-                            <span class="muted-text">اختر الإجراء المطلوب فقط لعرض القسم المناسب بدون ازدحام داخل الصفحة.</span>
+                            <h2>
+                                <?php if ($selectedSupplier): ?>
+                                    المورد: <?php echo e($selectedSupplier['name']); ?>
+                                <?php else: ?>
+                                    المورد غير متاح
+                                <?php endif; ?>
+                            </h2>
+                            <span class="muted-text">
+                                <?php echo e($selectedSupplier ? 'كل خطوة أصبحت في صفحة مستقلة مع روابط رجوع واضحة.' : 'اختر موردًا صالحًا للمتابعة بين صفحات الموردين والفواتير.'); ?>
+                            </span>
                         </div>
                     </div>
                     <div class="supplier-focus-actions">
-                        <a class="inline-link" href="<?php echo e(supplierUrl([
-                            'supplier_id' => (int) $selectedSupplier['id'],
-                            'view' => 'invoice',
-                        ])); ?>#invoice-form">➕ إضافة فاتورة</a>
-                        <a class="inline-link" href="<?php echo e(supplierUrl([
-                            'supplier_id' => (int) $selectedSupplier['id'],
-                            'view' => 'invoices',
-                        ])); ?>#supplier-invoices">📚 عرض الفواتير السابقة</a>
+                        <a class="inline-link" href="<?php echo e($pageBackUrl); ?>">⬅ رجوع</a>
+                        <?php if ($selectedSupplier && !$isInvoiceCreatePage): ?>
+                            <a class="inline-link" href="<?php echo e(supplierInvoiceCreatePageUrl((int) $selectedSupplier['id'], [
+                                'back' => $isInvoiceListPage ? $currentInvoiceListUrl : $pageBackUrl,
+                            ])); ?>">➕ إضافة فاتورة</a>
+                        <?php endif; ?>
+                        <?php if ($selectedSupplier && !$isInvoiceListPage): ?>
+                            <a class="inline-link" href="<?php echo e(supplierInvoicesPageUrl((int) $selectedSupplier['id'], [
+                                'back' => supplierListPageUrl(),
+                            ])); ?>">📚 فواتير المورد</a>
+                        <?php endif; ?>
                     </div>
                 </div>
 
-                <div class="invoice-meta-grid">
-                    <div class="summary-box">
-                        <p>رقم التليفون</p>
-                        <strong><?php echo e($selectedSupplier['phone']); ?></strong>
+                <?php if ($selectedSupplier): ?>
+                    <div class="invoice-meta-grid">
+                        <div class="summary-box">
+                            <p>رقم التليفون</p>
+                            <strong><?php echo e($selectedSupplier['phone']); ?></strong>
+                        </div>
+                        <div class="summary-box">
+                            <p>الرصيد الحالي</p>
+                            <strong><?php echo e(formatMoney($selectedSupplier['balance'])); ?> ج.م</strong>
+                        </div>
+                        <div class="summary-box">
+                            <p>عدد الفواتير</p>
+                            <strong><?php echo e($supplierInvoicesCount); ?></strong>
+                        </div>
+                        <div class="summary-box">
+                            <p>إجمالي المدفوع</p>
+                            <strong><?php echo e(formatMoney($supplierTotalPaid)); ?> ج.م</strong>
+                        </div>
                     </div>
-                    <div class="summary-box">
-                        <p>الرصيد الحالي</p>
-                        <strong><?php echo e(formatMoney($selectedSupplier['balance'])); ?> ج.م</strong>
-                    </div>
-                </div>
+                <?php endif; ?>
             </div>
-
-            <?php if ($showInvoiceForm || $showSupplierInvoices): ?>
-                <div class="supplier-management-grid<?php echo (($showInvoiceForm && !$showSupplierInvoices) || (!$showInvoiceForm && $showSupplierInvoices)) ? ' supplier-management-grid-single' : ''; ?>">
-                    <?php if ($showInvoiceForm): ?>
-                        <div class="form-card" id="invoice-form">
-                            <div class="page-header">
-                                <h2>إضافة فاتورة للمورد: <?php echo e($selectedSupplier['name']); ?></h2>
-                                <div class="table-actions">
-                                    <span class="muted-text">أدخل الأصناف ثم اختر حالة التسديد المناسبة فقط.</span>
-                                    <a class="inline-link small-link secondary-button" href="<?php echo e(supplierUrl([
-                                        'supplier_id' => (int) $selectedSupplier['id'],
-                                    ])); ?>#selected-supplier-focus">إغلاق</a>
-                                </div>
-                            </div>
-
-                            <div class="invoice-meta-grid">
-                                <div class="summary-box">
-                                    <p>رقم التليفون</p>
-                                    <strong><?php echo e($selectedSupplier['phone']); ?></strong>
-                                </div>
-                                <div class="summary-box">
-                                    <p>الرصيد الحالي</p>
-                                    <strong><?php echo e(formatMoney($selectedSupplier['balance'])); ?> ج.م</strong>
-                                </div>
-                            </div>
-
-                            <form method="POST" id="supplierInvoiceForm" class="section-stack">
-                                <input type="hidden" name="form_action" value="add_invoice">
-                                <input type="hidden" name="supplier_id" value="<?php echo (int) $selectedSupplier['id']; ?>">
-                                <input type="hidden" name="view" value="invoice">
-
-                                <div>
-                                    <label>أصناف الفاتورة</label>
-                                    <div id="invoiceItems">
-                                        <?php for ($rowIndex = 0; $rowIndex < $invoiceRowCount; $rowIndex++): ?>
-                                            <div class="invoice-item-row">
-                                                <div class="form-group">
-                                                    <label>اسم الصنف</label>
-                                                    <input type="text" name="item_name[]" value="<?php echo e($invoiceFormNames[$rowIndex] ?? ''); ?>" required>
-                                                </div>
-                                                <div class="form-group">
-                                                    <label>العدد</label>
-                                                    <input type="number" step="0.01" min="0.01" name="quantity[]" value="<?php echo e($invoiceFormQuantities[$rowIndex] ?? ''); ?>" required>
-                                                </div>
-                                                <div class="form-group">
-                                                    <label>السعر</label>
-                                                    <input type="number" step="0.01" min="0" name="unit_price[]" value="<?php echo e($invoiceFormPrices[$rowIndex] ?? ''); ?>" required>
-                                                </div>
-                                                <button type="button" class="secondary-button button-inline remove-item-row">حذف</button>
-                                            </div>
-                                        <?php endfor; ?>
-                                    </div>
-                                    <button type="button" class="secondary-button button-inline" id="addItemRow">➕ إضافة صنف آخر</button>
-                                </div>
-
-                                <div class="summary-box">
-                                    <p>إجمالي الفاتورة الحالي</p>
-                                    <strong><span id="invoiceTotalValue">0.00</span> ج.م</strong>
-                                </div>
-
-                                <div class="form-group select-group">
-                                    <label>نوع التسديد</label>
-                                    <select name="payment_status" id="invoicePaymentStatus" required>
-                                        <?php foreach ($paymentStatuses as $paymentStatus): ?>
-                                            <option value="<?php echo e($paymentStatus); ?>" <?php echo $invoiceStatusValue === $paymentStatus ? 'selected' : ''; ?>><?php echo e($paymentStatus); ?></option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                </div>
-
-                                <div class="form-group" id="invoicePartialAmountGroup">
-                                    <label>المبلغ المدفوع الآن</label>
-                                    <input type="number" step="0.01" min="0.01" name="paid_amount" id="invoicePaidAmount" value="<?php echo e($invoicePaidAmountValue); ?>">
-                                    <small class="muted-text">يُطلب هذا الحقل فقط عند اختيار حالة نصف مدفوعة.</small>
-                                </div>
-
-                                <div id="invoicePaymentDetails" class="section-stack">
-                                    <div class="form-group select-group">
-                                        <label>عدد وسائل الدفع</label>
-                                        <select name="payment_option" id="invoicePaymentOption">
-                                            <?php foreach ($paymentOptions as $paymentOption): ?>
-                                                <option value="<?php echo e($paymentOption); ?>" <?php echo $invoicePaymentOptionValue === $paymentOption ? 'selected' : ''; ?>><?php echo e($paymentOption); ?></option>
-                                            <?php endforeach; ?>
-                                        </select>
-                                    </div>
-
-                                    <div id="invoiceSinglePaymentBox">
-                                        <div class="form-group select-group">
-                                            <label>نوع وسيلة الدفع</label>
-                                            <select name="payment_method_single">
-                                                <option value="">اختر وسيلة الدفع</option>
-                                                <?php foreach ($paymentMethods as $paymentMethod): ?>
-                                                    <option value="<?php echo e($paymentMethod); ?>" <?php echo $invoicePaymentSingleValue === $paymentMethod ? 'selected' : ''; ?>><?php echo e($paymentMethod); ?></option>
-                                                <?php endforeach; ?>
-                                            </select>
-                                        </div>
-                                    </div>
-
-                                    <div id="invoiceDoublePaymentBox" class="payment-method-grid">
-                                        <div class="form-group select-group">
-                                            <label>وسيلة الدفع الأولى</label>
-                                            <select name="payment_method_one">
-                                                <option value="">اختر الوسيلة الأولى</option>
-                                                <?php foreach ($paymentMethods as $paymentMethod): ?>
-                                                    <option value="<?php echo e($paymentMethod); ?>" <?php echo $invoicePaymentOneValue === $paymentMethod ? 'selected' : ''; ?>><?php echo e($paymentMethod); ?></option>
-                                                <?php endforeach; ?>
-                                            </select>
-                                        </div>
-                                        <div class="form-group">
-                                            <label>مبلغ الوسيلة الأولى</label>
-                                            <input type="number" step="0.01" min="0.01" name="payment_amount_one" value="<?php echo e($invoicePaymentAmountOneValue); ?>">
-                                        </div>
-                                        <div class="form-group select-group">
-                                            <label>وسيلة الدفع الثانية</label>
-                                            <select name="payment_method_two">
-                                                <option value="">اختر الوسيلة الثانية</option>
-                                                <?php foreach ($paymentMethods as $paymentMethod): ?>
-                                                    <option value="<?php echo e($paymentMethod); ?>" <?php echo $invoicePaymentTwoValue === $paymentMethod ? 'selected' : ''; ?>><?php echo e($paymentMethod); ?></option>
-                                                <?php endforeach; ?>
-                                            </select>
-                                        </div>
-                                        <div class="form-group">
-                                            <label>مبلغ الوسيلة الثانية</label>
-                                            <input type="number" step="0.01" min="0.01" name="payment_amount_two" value="<?php echo e($invoicePaymentAmountTwoValue); ?>">
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <button type="submit">💾 حفظ الفاتورة</button>
-                            </form>
-                        </div>
-                    <?php endif; ?>
-
-                    <?php if ($showSupplierInvoices): ?>
-                        <div class="table-card" id="supplier-invoices">
-                            <div class="page-header">
-                                <h2>الفواتير السابقة للمورد</h2>
-                                <div class="table-actions">
-                                    <span class="muted-text">كل فاتورة تعرض سجل التسديدات الخاص بها بشكل مستقل.</span>
-                                    <a class="inline-link small-link secondary-button" href="<?php echo e(supplierUrl([
-                                        'supplier_id' => (int) $selectedSupplier['id'],
-                                    ])); ?>#selected-supplier-focus">إغلاق</a>
-                                </div>
-                            </div>
-
-                            <?php if ($supplierInvoices): ?>
-                                <div class="invoice-summary-strip">
-                                    <div class="summary-box">
-                                        <p>عدد الفواتير</p>
-                                        <strong><?php echo (int) $supplierInvoicesCount; ?></strong>
-                                    </div>
-                                    <div class="summary-box">
-                                        <p>فواتير مسددة</p>
-                                        <strong><?php echo (int) $settledInvoicesCount; ?></strong>
-                                    </div>
-                                    <div class="summary-box">
-                                        <p>فواتير مفتوحة</p>
-                                        <strong><?php echo (int) $openInvoicesCount; ?></strong>
-                                    </div>
-                                    <div class="summary-box">
-                                        <p>إجمالي ما تم سداده</p>
-                                        <strong><?php echo e(formatMoney($supplierTotalPaid)); ?> ج.م</strong>
-                                    </div>
-                                </div>
-
-                                <div class="invoice-records-list">
-                                    <?php foreach ($supplierInvoices as $invoice): ?>
-                                        <?php
-                                        $invoiceId = (int) $invoice['id'];
-                                        $invoicePayments = $supplierInvoicePaymentsByInvoice[$invoiceId] ?? [];
-                                        $isSelectedInvoice = $selectedInvoiceId === $invoiceId;
-                                        ?>
-                                        <article class="invoice-record-card<?php echo $isSelectedInvoice ? ' invoice-record-card-active' : ''; ?>">
-                                            <div class="invoice-record-header">
-                                                <div>
-                                                    <div class="invoice-record-label">فاتورة رقم #<?php echo $invoiceId; ?></div>
-                                                    <h3>تاريخ الحفظ: <?php echo e(formatDateTimeForDisplay($invoice['created_at'])); ?></h3>
-                                                </div>
-                                                <span class="invoice-status-pill"><?php echo e($invoice['payment_status']); ?></span>
-                                            </div>
-
-                                            <div class="invoice-meta-grid">
-                                                <div class="summary-box">
-                                                    <p>إجمالي الفاتورة</p>
-                                                    <strong><?php echo e(formatMoney($invoice['total_amount'])); ?> ج.م</strong>
-                                                </div>
-                                                <div class="summary-box">
-                                                    <p>إجمالي المدفوع</p>
-                                                    <strong><?php echo e(formatMoney($invoice['amount_paid'])); ?> ج.م</strong>
-                                                </div>
-                                                <div class="summary-box">
-                                                    <p>المبلغ المتبقي</p>
-                                                    <strong><?php echo e(formatMoney($invoice['amount_due'])); ?> ج.م</strong>
-                                                </div>
-                                            </div>
-
-                                            <div class="invoice-payment-history">
-                                                <div class="page-header">
-                                                    <h3>سجل التسديدات الخاص بالفاتورة</h3>
-                                                    <span class="muted-text">عدد الحركات: <?php echo count($invoicePayments); ?></span>
-                                                </div>
-
-                                                <?php if ($invoicePayments): ?>
-                                                    <div class="payment-history-table-wrap">
-                                                        <table class="compact-table payment-history-table">
-                                                            <thead>
-                                                                <tr>
-                                                                    <th>التاريخ والوقت</th>
-                                                                    <th>وسيلة الدفع</th>
-                                                                    <th>المبلغ</th>
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody>
-                                                                <?php foreach ($invoicePayments as $payment): ?>
-                                                                    <tr>
-                                                                        <td><?php echo e(formatDateTimeForDisplay($payment['created_at'])); ?></td>
-                                                                        <td><?php echo e($payment['payment_method']); ?></td>
-                                                                        <td><?php echo e(formatMoney($payment['payment_amount'])); ?> ج.م</td>
-                                                                    </tr>
-                                                                <?php endforeach; ?>
-                                                            </tbody>
-                                                        </table>
-                                                    </div>
-                                                <?php else: ?>
-                                                    <p class="muted-text">لا توجد عمليات تسديد مسجلة لهذه الفاتورة حتى الآن.</p>
-                                                <?php endif; ?>
-                                            </div>
-
-                                            <div class="invoice-record-actions">
-                                                <a class="inline-link small-link" href="<?php echo e(supplierUrl([
-                                                    'supplier_id' => $selectedSupplierId,
-                                                    'invoice_id' => $invoiceId,
-                                                    'view' => 'invoices',
-                                                ])); ?>#invoice-details">عرض التفاصيل والتسديد</a>
-                                            </div>
-                                        </article>
-                                    <?php endforeach; ?>
-                                </div>
-                            <?php else: ?>
-                                <p class="muted-text">لا توجد فواتير مسجلة لهذا المورد حتى الآن.</p>
-                            <?php endif; ?>
-                        </div>
-                    <?php endif; ?>
-                </div>
-            <?php endif; ?>
         <?php endif; ?>
 
-        <?php if ($selectedInvoice): ?>
+        <?php if ($isInvoiceCreatePage && $selectedSupplier): ?>
+            <div class="form-card" id="invoice-form">
+                <div class="page-header">
+                    <h2>إضافة فاتورة للمورد: <?php echo e($selectedSupplier['name']); ?></h2>
+                    <div class="table-actions">
+                        <span class="muted-text">أدخل الأصناف ثم اختر حالة التسديد المناسبة.</span>
+                        <a class="inline-link small-link secondary-button" href="<?php echo e($invoiceCreateBackUrl); ?>">إلغاء والرجوع</a>
+                    </div>
+                </div>
+
+                <form method="POST" id="supplierInvoiceForm" class="section-stack">
+                    <input type="hidden" name="form_action" value="add_invoice">
+                    <input type="hidden" name="supplier_id" value="<?php echo (int) $selectedSupplier['id']; ?>">
+                    <input type="hidden" name="return_to" value="<?php echo e($invoiceCreateBackUrl); ?>">
+
+                    <div>
+                        <label>أصناف الفاتورة</label>
+                        <div id="invoiceItems">
+                            <?php for ($rowIndex = 0; $rowIndex < $invoiceRowCount; $rowIndex++): ?>
+                                <div class="invoice-item-row">
+                                    <div class="form-group">
+                                        <label>اسم الصنف</label>
+                                        <input type="text" name="item_name[]" value="<?php echo e($invoiceFormNames[$rowIndex] ?? ''); ?>" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>العدد</label>
+                                        <input type="number" step="0.01" min="0.01" name="quantity[]" value="<?php echo e($invoiceFormQuantities[$rowIndex] ?? ''); ?>" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>السعر</label>
+                                        <input type="number" step="0.01" min="0" name="unit_price[]" value="<?php echo e($invoiceFormPrices[$rowIndex] ?? ''); ?>" required>
+                                    </div>
+                                    <button type="button" class="secondary-button button-inline remove-item-row">حذف</button>
+                                </div>
+                            <?php endfor; ?>
+                        </div>
+                        <button type="button" class="secondary-button button-inline" id="addItemRow">➕ إضافة صنف آخر</button>
+                    </div>
+
+                    <div class="summary-box">
+                        <p>إجمالي الفاتورة الحالي</p>
+                        <strong><span id="invoiceTotalValue">0.00</span> ج.م</strong>
+                    </div>
+
+                    <div class="form-group select-group">
+                        <label>نوع التسديد</label>
+                        <select name="payment_status" id="invoicePaymentStatus" required>
+                            <?php foreach ($paymentStatuses as $paymentStatus): ?>
+                                <option value="<?php echo e($paymentStatus); ?>" <?php echo $invoiceStatusValue === $paymentStatus ? 'selected' : ''; ?>><?php echo e($paymentStatus); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <div class="form-group" id="invoicePartialAmountGroup">
+                        <label>المبلغ المدفوع الآن</label>
+                        <input type="number" step="0.01" min="0.01" name="paid_amount" id="invoicePaidAmount" value="<?php echo e($invoicePaidAmountValue); ?>">
+                        <small class="muted-text">يُطلب هذا الحقل فقط عند اختيار حالة نصف مدفوعة.</small>
+                    </div>
+
+                    <div id="invoicePaymentDetails" class="section-stack">
+                        <div class="form-group select-group">
+                            <label>عدد وسائل الدفع</label>
+                            <select name="payment_option" id="invoicePaymentOption">
+                                <?php foreach ($paymentOptions as $paymentOption): ?>
+                                    <option value="<?php echo e($paymentOption); ?>" <?php echo $invoicePaymentOptionValue === $paymentOption ? 'selected' : ''; ?>><?php echo e($paymentOption); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+
+                        <div id="invoiceSinglePaymentBox">
+                            <div class="form-group select-group">
+                                <label>نوع وسيلة الدفع</label>
+                                <select name="payment_method_single">
+                                    <option value="">اختر وسيلة الدفع</option>
+                                    <?php foreach ($paymentMethods as $paymentMethod): ?>
+                                        <option value="<?php echo e($paymentMethod); ?>" <?php echo $invoicePaymentSingleValue === $paymentMethod ? 'selected' : ''; ?>><?php echo e($paymentMethod); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div id="invoiceDoublePaymentBox" class="payment-method-grid">
+                            <div class="form-group select-group">
+                                <label>وسيلة الدفع الأولى</label>
+                                <select name="payment_method_one">
+                                    <option value="">اختر الوسيلة الأولى</option>
+                                    <?php foreach ($paymentMethods as $paymentMethod): ?>
+                                        <option value="<?php echo e($paymentMethod); ?>" <?php echo $invoicePaymentOneValue === $paymentMethod ? 'selected' : ''; ?>><?php echo e($paymentMethod); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>مبلغ الوسيلة الأولى</label>
+                                <input type="number" step="0.01" min="0.01" name="payment_amount_one" value="<?php echo e($invoicePaymentAmountOneValue); ?>">
+                            </div>
+                            <div class="form-group select-group">
+                                <label>وسيلة الدفع الثانية</label>
+                                <select name="payment_method_two">
+                                    <option value="">اختر الوسيلة الثانية</option>
+                                    <?php foreach ($paymentMethods as $paymentMethod): ?>
+                                        <option value="<?php echo e($paymentMethod); ?>" <?php echo $invoicePaymentTwoValue === $paymentMethod ? 'selected' : ''; ?>><?php echo e($paymentMethod); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>مبلغ الوسيلة الثانية</label>
+                                <input type="number" step="0.01" min="0.01" name="payment_amount_two" value="<?php echo e($invoicePaymentAmountTwoValue); ?>">
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit">💾 حفظ الفاتورة</button>
+                </form>
+            </div>
+        <?php endif; ?>
+
+        <?php if ($isInvoiceListPage && $selectedSupplier): ?>
+            <div class="table-card" id="supplier-invoices">
+                <div class="page-header">
+                    <h2>الفواتير السابقة للمورد</h2>
+                    <div class="table-actions">
+                        <span class="muted-text">كل فاتورة أصبحت لها صفحة تفاصيل مستقلة وسجل تسديداتها الخاص.</span>
+                        <a class="inline-link small-link secondary-button" href="<?php echo e($invoiceListBackUrl); ?>">رجوع</a>
+                    </div>
+                </div>
+
+                <?php if ($supplierInvoices): ?>
+                    <div class="invoice-summary-strip">
+                        <div class="summary-box">
+                            <p>عدد الفواتير</p>
+                            <strong><?php echo (int) $supplierInvoicesCount; ?></strong>
+                        </div>
+                        <div class="summary-box">
+                            <p>فواتير مسددة</p>
+                            <strong><?php echo (int) $settledInvoicesCount; ?></strong>
+                        </div>
+                        <div class="summary-box">
+                            <p>فواتير مفتوحة</p>
+                            <strong><?php echo (int) $openInvoicesCount; ?></strong>
+                        </div>
+                        <div class="summary-box">
+                            <p>إجمالي ما تم سداده</p>
+                            <strong><?php echo e(formatMoney($supplierTotalPaid)); ?> ج.م</strong>
+                        </div>
+                    </div>
+
+                    <div class="invoice-records-list">
+                        <?php foreach ($supplierInvoices as $invoice): ?>
+                            <?php
+                            $invoiceId = (int) $invoice['id'];
+                            $invoicePayments = $supplierInvoicePaymentsByInvoice[$invoiceId] ?? [];
+                            ?>
+                            <article class="invoice-record-card">
+                                <div class="invoice-record-header">
+                                    <div>
+                                        <div class="invoice-record-label">فاتورة رقم #<?php echo $invoiceId; ?></div>
+                                        <h3>تاريخ الحفظ: <?php echo e(formatDateTimeForDisplay($invoice['created_at'])); ?></h3>
+                                    </div>
+                                    <span class="invoice-status-pill"><?php echo e($invoice['payment_status']); ?></span>
+                                </div>
+
+                                <div class="invoice-meta-grid">
+                                    <div class="summary-box">
+                                        <p>إجمالي الفاتورة</p>
+                                        <strong><?php echo e(formatMoney($invoice['total_amount'])); ?> ج.م</strong>
+                                    </div>
+                                    <div class="summary-box">
+                                        <p>إجمالي المدفوع</p>
+                                        <strong><?php echo e(formatMoney($invoice['amount_paid'])); ?> ج.م</strong>
+                                    </div>
+                                    <div class="summary-box">
+                                        <p>المبلغ المتبقي</p>
+                                        <strong><?php echo e(formatMoney($invoice['amount_due'])); ?> ج.م</strong>
+                                    </div>
+                                </div>
+
+                                <div class="invoice-payment-history">
+                                    <div class="page-header">
+                                        <h3>سجل التسديدات الخاص بالفاتورة</h3>
+                                        <span class="muted-text">عدد الحركات: <?php echo count($invoicePayments); ?></span>
+                                    </div>
+
+                                    <?php if ($invoicePayments): ?>
+                                        <div class="payment-history-table-wrap">
+                                            <table class="compact-table payment-history-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th>التاريخ والوقت</th>
+                                                        <th>وسيلة الدفع</th>
+                                                        <th>المبلغ</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <?php foreach ($invoicePayments as $payment): ?>
+                                                        <tr>
+                                                            <td><?php echo e(formatDateTimeForDisplay($payment['created_at'])); ?></td>
+                                                            <td><?php echo e($payment['payment_method']); ?></td>
+                                                            <td><?php echo e(formatMoney($payment['payment_amount'])); ?> ج.م</td>
+                                                        </tr>
+                                                    <?php endforeach; ?>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    <?php else: ?>
+                                        <p class="muted-text">لا توجد عمليات تسديد مسجلة لهذه الفاتورة حتى الآن.</p>
+                                    <?php endif; ?>
+                                </div>
+
+                                <div class="invoice-record-actions">
+                                    <a class="inline-link small-link" href="<?php echo e(supplierInvoiceDetailsPageUrl(
+                                        $selectedSupplierId,
+                                        $invoiceId,
+                                        ['back' => $currentInvoiceListUrl]
+                                    )); ?>">عرض التفاصيل والتسديد</a>
+                                </div>
+                            </article>
+                        <?php endforeach; ?>
+                    </div>
+                <?php else: ?>
+                    <p class="muted-text">لا توجد فواتير مسجلة لهذا المورد حتى الآن.</p>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
+
+        <?php if ($isInvoiceDetailsPage && $selectedInvoice && $selectedSupplier): ?>
             <div class="supplier-management-grid" id="invoice-details">
                 <div class="table-card">
                     <div class="page-header">
                         <h2>تفاصيل الفاتورة رقم <?php echo (int) $selectedInvoice['id']; ?></h2>
-                        <a class="inline-link small-link secondary-button" href="<?php echo e(supplierUrl([
-                            'supplier_id' => (int) $selectedSupplier['id'],
-                            'view' => 'invoices',
-                        ])); ?>#supplier-invoices">إغلاق</a>
+                        <a class="inline-link small-link secondary-button" href="<?php echo e($invoiceDetailsBackUrl); ?>">رجوع</a>
                     </div>
 
                     <div class="invoice-meta-grid">
@@ -1171,7 +1367,7 @@ $settlementPaymentAmountTwoValue = $submittedAction === 'add_payment' ? trim((st
                             <input type="hidden" name="form_action" value="add_payment">
                             <input type="hidden" name="supplier_id" value="<?php echo (int) $selectedSupplierId; ?>">
                             <input type="hidden" name="invoice_id" value="<?php echo (int) $selectedInvoice['id']; ?>">
-                            <input type="hidden" name="view" value="invoices">
+                            <input type="hidden" name="return_to" value="<?php echo e($invoiceDetailsBackUrl); ?>">
 
                             <div class="summary-box">
                                 <p>الرصيد المتبقي على الفاتورة</p>
