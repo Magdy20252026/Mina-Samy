@@ -27,7 +27,7 @@ function getSidebarSections()
         ['icon' => '🛒', 'label' => 'المبيعات', 'aria_label' => 'قسم المبيعات'],
         ['icon' => '🤝', 'label' => 'عملاء', 'aria_label' => 'قسم العملاء'],
         ['icon' => '💸', 'label' => 'مصروفات', 'aria_label' => 'قسم المصروفات', 'href' => 'expenses.php'],
-        ['icon' => '👔', 'label' => 'موظفين', 'aria_label' => 'قسم الموظفين'],
+        ['icon' => '👔', 'label' => 'موظفين', 'aria_label' => 'قسم الموظفين', 'href' => 'employees.php'],
         ['icon' => '💵', 'label' => 'قبض موظفين', 'aria_label' => 'قسم قبض الموظفين'],
         ['icon' => '📊', 'label' => 'إحصائيات', 'aria_label' => 'قسم الإحصائيات'],
     ];
