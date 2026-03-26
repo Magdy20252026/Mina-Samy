@@ -931,7 +931,7 @@ if ($isInvoiceCreatePage) {
                 <div class="form-card">
                     <div class="page-header">
                         <h2>إضافة مورد جديد</h2>
-                        <span class="muted-text">سجّل المورد ثم انتقل إلى صفحة الفواتير أو إنشاء فاتورة من الجدول.</span>
+                        <span class="muted-text">سجّل المورد أولًا، ثم انتقل إلى صفحة الفواتير أو إنشاء فاتورة من الجدول.</span>
                     </div>
 
                     <form method="POST">
@@ -1006,7 +1006,9 @@ if ($isInvoiceCreatePage) {
                                     المورد غير متاح
                                 <?php endif; ?>
                             </h2>
-                            <span class="muted-text">كل خطوة أصبحت في صفحة مستقلة مع روابط رجوع واضحة.</span>
+                            <span class="muted-text">
+                                <?php echo e($selectedSupplier ? 'كل خطوة أصبحت في صفحة مستقلة مع روابط رجوع واضحة.' : 'اختر موردًا صالحًا للمتابعة بين صفحات الموردين والفواتير.'); ?>
+                            </span>
                         </div>
                     </div>
                     <div class="supplier-focus-actions">
@@ -1168,7 +1170,7 @@ if ($isInvoiceCreatePage) {
                 <div class="page-header">
                     <h2>الفواتير السابقة للمورد</h2>
                     <div class="table-actions">
-                        <span class="muted-text">كل فاتورة لها صفحة تفاصيل مستقلة وسجل تسديداتها الخاص.</span>
+                        <span class="muted-text">كل فاتورة أصبحت لها صفحة تفاصيل مستقلة وسجل تسديداتها الخاص.</span>
                         <a class="inline-link small-link secondary-button" href="<?php echo e($invoiceListBackUrl); ?>">رجوع</a>
                     </div>
                 </div>
