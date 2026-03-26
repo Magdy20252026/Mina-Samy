@@ -71,6 +71,10 @@ function ensureCustomerTables(PDO $pdo)
 
 function tableExists(PDO $pdo, $tableName)
 {
+    if (!preg_match('/^[A-Za-z0-9_]+$/', (string) $tableName)) {
+        return false;
+    }
+
     $stmt = $pdo->prepare('SHOW TABLES LIKE ?');
     $stmt->execute([(string) $tableName]);
 
@@ -83,10 +87,20 @@ function tableHasColumn(PDO $pdo, $tableName, $columnName)
         return false;
     }
 
-    $stmt = $pdo->prepare("SHOW COLUMNS FROM `$tableName` LIKE ?");
-    $stmt->execute([(string) $columnName]);
+    if (!preg_match('/^[A-Za-z0-9_]+$/', (string) $columnName)) {
+        return false;
+    }
 
-    return (bool) $stmt->fetch(PDO::FETCH_ASSOC);
+    $stmt = $pdo->prepare("
+        SELECT COUNT(*)
+        FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = ?
+          AND COLUMN_NAME = ?
+    ");
+    $stmt->execute([(string) $tableName, (string) $columnName]);
+
+    return (bool) $stmt->fetchColumn();
 }
 
 function syncCustomerTableStructure(PDO $pdo)
@@ -243,7 +257,7 @@ function getCustomerById(PDO $pdo, $customerId)
             phone,
             balance,
             created_at
-        FROM customers s
+        FROM customers c
         WHERE id = ?
         LIMIT 1
     ");
@@ -357,7 +371,7 @@ function parseInvoiceItems(array $names, array $quantities, array $prices, &$err
         }
 
         if (!is_numeric($quantityValue) || !is_numeric($priceValue)) {
-            $error = 'العدد والسعر يجب أن يكونا أرقامًا صحيحة';
+            $error = 'العدد والسعر يجب أن يكونا أرقامًا صالحة';
 
             return [];
         }
@@ -365,8 +379,8 @@ function parseInvoiceItems(array $names, array $quantities, array $prices, &$err
         $quantity = normalizeAmount($quantityValue);
         $unitPrice = normalizeAmount($priceValue);
 
-        if ($quantity <= 0 || $unitPrice < 0) {
-            $error = 'يجب أن يكون العدد أكبر من صفر والسعر لا يقل عن صفر';
+        if ($quantity <= 0 || $unitPrice <= 0) {
+            $error = 'يجب أن يكون العدد والسعر أكبر من صفر';
 
             return [];
         }
@@ -432,7 +446,7 @@ function validatePaymentSubmission(array $source, $targetAmount, array $paymentM
     }
 
     if (!is_numeric($amountOneValue) || !is_numeric($amountTwoValue)) {
-        $error = 'مبالغ وسيلتي الدفع يجب أن تكون أرقامًا صحيحة';
+        $error = 'مبالغ وسيلتي الدفع يجب أن تكون أرقامًا صالحة';
 
         return null;
     }
@@ -1306,7 +1320,7 @@ if ($isInvoiceCreatePage) {
                                     </div>
                                     <div class="form-group">
                                         <label>السعر</label>
-                                        <input type="number" step="0.01" min="0" name="unit_price[]" value="<?php echo e($invoiceFormPrices[$rowIndex] ?? ''); ?>" required>
+                                        <input type="number" step="0.01" min="0.01" name="unit_price[]" value="<?php echo e($invoiceFormPrices[$rowIndex] ?? ''); ?>" required>
                                     </div>
                                     <button type="button" class="secondary-button button-inline remove-item-row">حذف</button>
                                 </div>
@@ -1692,7 +1706,7 @@ if ($isInvoiceCreatePage) {
 
 <script src="assets/js/theme.js"></script>
 <script>
-    const saleItemCatalog = <?php echo json_encode($saleItemCatalog, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+    const saleItemCatalog = <?php echo json_encode($saleItemCatalog, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
 
     function parseNumber(value) {
         const parsed = parseFloat(value);
@@ -1736,7 +1750,7 @@ if ($isInvoiceCreatePage) {
             </div>
             <div class="form-group">
                 <label>السعر</label>
-                <input type="number" step="0.01" min="0" name="unit_price[]" required>
+                <input type="number" step="0.01" min="0.01" name="unit_price[]" required>
             </div>
             <button type="button" class="secondary-button button-inline remove-item-row">حذف</button>
         `;
@@ -1794,7 +1808,7 @@ if ($isInvoiceCreatePage) {
         }
 
         if (forceUpdate || priceField.value.trim() === '') {
-            priceField.value = Number.parseFloat(matchedItem.unit_price || 0).toFixed(2);
+            priceField.value = parseFloat(matchedItem.unit_price || 0).toFixed(2);
         }
     }
 
