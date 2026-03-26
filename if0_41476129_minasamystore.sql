@@ -104,6 +104,20 @@ CREATE TABLE `supplier_invoice_payments` (
   `created_at` datetime NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- --------------------------------------------------------
+
+--
+-- بنية الجدول `expenses`
+--
+
+CREATE TABLE `expenses` (
+  `id` int(11) NOT NULL,
+  `description` varchar(255) NOT NULL,
+  `amount` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `user_id` int(11) NOT NULL,
+  `created_at` datetime NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 --
 -- Indexes for dumped tables
 --
@@ -144,6 +158,14 @@ ALTER TABLE `supplier_invoice_payments`
   ADD KEY `invoice_id` (`invoice_id`);
 
 --
+-- Indexes for table `expenses`
+--
+ALTER TABLE `expenses`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `user_id` (`user_id`),
+  ADD KEY `created_at` (`created_at`);
+
+--
 -- AUTO_INCREMENT for dumped tables
 --
 
@@ -175,6 +197,12 @@ ALTER TABLE `supplier_invoice_items`
 -- AUTO_INCREMENT for table `supplier_invoice_payments`
 --
 ALTER TABLE `supplier_invoice_payments`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `expenses`
+--
+ALTER TABLE `expenses`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
