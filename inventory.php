@@ -442,6 +442,7 @@ $inventoryItemNameValue = $submittedAction === 'edit_inventory_item'
 $inventoryQuantityValue = $submittedAction === 'edit_inventory_item'
     ? trim((string) ($_POST['quantity'] ?? ''))
     : (($editingInventoryItem && $editingInventoryItem['quantity'] !== null) ? normalizeInventoryAmount($editingInventoryItem['quantity']) : ($submittedAction === 'add_inventory_item' ? ($_POST['quantity'] ?? '') : ''));
+$inventoryQuantityMin = $editingInventoryItem ? '0' : '0.01';
 $inventoryUnitPriceValue = $submittedAction === 'edit_inventory_item'
     ? trim((string) ($_POST['unit_price'] ?? ''))
     : (($editingInventoryItem && isset($editingInventoryItem['unit_price'])) ? normalizeInventoryAmount($editingInventoryItem['unit_price']) : ($submittedAction === 'add_inventory_item' ? ($_POST['unit_price'] ?? '') : ''));
@@ -670,7 +671,7 @@ foreach ($issuedSuggestions as $suggestion) {
 
                         <div class="form-group">
                             <label>العدد</label>
-                            <input type="number" step="0.01" min="0" name="quantity" value="<?php echo e($inventoryQuantityValue); ?>" placeholder="اختياري">
+                            <input type="number" step="0.01" min="<?php echo e($inventoryQuantityMin); ?>" name="quantity" value="<?php echo e($inventoryQuantityValue); ?>" placeholder="اختياري">
                         </div>
 
                         <div class="form-group">
