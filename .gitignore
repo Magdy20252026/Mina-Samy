@@ -1,0 +1,6 @@
+android-webview/.gradle/
+android-webview/build/
+android-webview/app/build/
+android-webview/local.properties
+*.iml
+.idea/
