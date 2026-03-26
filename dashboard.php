@@ -132,7 +132,7 @@ try {
                     <span class="stat-icon">🚚</span>
                 </div>
                 <div class="stat-number"><?php echo $totalSuppliers; ?></div>
-                <p>عدد الموردين الفعلي المسجل في الموردين</p>
+                <p>إجمالي الموردين المسجلين</p>
             </div>
         </div>
 
