@@ -28,25 +28,34 @@ $success = trim((string) ($_GET['success'] ?? ''));
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $description = trim((string) ($_POST['description'] ?? ''));
     $amount = trim((string) ($_POST['amount'] ?? ''));
+    $userId = $_SESSION['user_id'] ?? null;
 
     if ($description === '' || $amount === '') {
         $error = 'البيان والمبلغ مطلوبان';
-    } elseif (!is_numeric($amount) || (float) $amount <= 0) {
-        $error = 'أدخل مبلغًا صحيحًا أكبر من صفر';
+    } elseif (!is_numeric($amount)) {
+        $error = 'أدخل مبلغًا صحيحًا';
+    } elseif ($userId === null) {
+        $error = 'تعذر تحديد المستخدم الحالي';
     } else {
-        $stmt = $pdo->prepare("
-            INSERT INTO expenses (description, amount, user_id, created_at)
-            VALUES (?, ?, ?, ?)
-        ");
-        $stmt->execute([
-            $description,
-            number_format((float) $amount, 2, '.', ''),
-            (int) ($_SESSION['user_id'] ?? 0),
-            getEgyptDateTimeValue(),
-        ]);
+        $amountValue = (float) $amount;
 
-        header('Location: expenses.php?success=created');
-        exit;
+        if ($amountValue <= 0) {
+            $error = 'أدخل مبلغًا صحيحًا أكبر من صفر';
+        } else {
+            $stmt = $pdo->prepare("
+                INSERT INTO expenses (description, amount, user_id, created_at)
+                VALUES (?, ?, ?, ?)
+            ");
+            $stmt->execute([
+                $description,
+                $amountValue,
+                (int) $userId,
+                getEgyptDateTimeValue(),
+            ]);
+
+            header('Location: expenses.php?success=created');
+            exit;
+        }
     }
 }
 
