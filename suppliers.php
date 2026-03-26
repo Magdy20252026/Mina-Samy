@@ -1278,7 +1278,10 @@ if ($isInvoiceCreatePage) {
                 <div class="table-card">
                     <div class="page-header">
                         <h2>تفاصيل الفاتورة رقم <?php echo (int) $selectedInvoice['id']; ?></h2>
-                        <a class="inline-link small-link secondary-button" href="<?php echo e($invoiceDetailsBackUrl); ?>">رجوع</a>
+                        <div class="table-actions">
+                            <a class="inline-link small-link" href="supplier_invoice_print.php?supplier_id=<?php echo (int) $selectedSupplierId; ?>&invoice_id=<?php echo (int) $selectedInvoice['id']; ?>" target="_blank" rel="noopener">🖨️ طباعة الفاتورة</a>
+                            <a class="inline-link small-link secondary-button" href="<?php echo e($invoiceDetailsBackUrl); ?>">رجوع</a>
+                        </div>
                     </div>
 
                     <div class="invoice-meta-grid">
