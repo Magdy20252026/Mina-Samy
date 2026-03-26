@@ -69,6 +69,7 @@ $stmt = $pdo->query("
     FROM expenses
     LEFT JOIN users ON users.id = expenses.user_id
     ORDER BY expenses.created_at DESC, expenses.id DESC
+    LIMIT 200
 ");
 $expenses = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
