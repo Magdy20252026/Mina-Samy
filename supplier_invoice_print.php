@@ -182,10 +182,15 @@ if ($selectedSupplierId <= 0 || $selectedInvoiceId <= 0) {
             font-size: 20px;
         }
 
+        .thermal-only {
+            display: none;
+        }
+
         table {
             width: 100%;
             border-collapse: collapse;
             margin-bottom: 24px;
+            table-layout: fixed;
         }
 
         th,
@@ -194,6 +199,7 @@ if ($selectedSupplierId <= 0 || $selectedInvoiceId <= 0) {
             padding: 12px 10px;
             text-align: right;
             vertical-align: top;
+            word-break: break-word;
         }
 
         thead {
@@ -209,16 +215,20 @@ if ($selectedSupplierId <= 0 || $selectedInvoiceId <= 0) {
 
         @media print {
             @page {
-                size: auto;
-                margin: 12mm;
+                size: 80mm auto;
+                margin: 4mm;
             }
 
             body {
                 background: #ffffff;
+                width: 80mm;
+                margin: 0 auto;
+                font-size: 11px;
             }
 
             .print-page {
-                max-width: none;
+                width: 100%;
+                max-width: 72mm;
                 margin: 0;
                 padding: 0;
                 box-shadow: none;
@@ -226,6 +236,123 @@ if ($selectedSupplierId <= 0 || $selectedInvoiceId <= 0) {
 
             .print-actions {
                 display: none;
+            }
+
+            .invoice-header,
+            .store-block,
+            .invoice-title-block {
+                display: block;
+                text-align: center;
+            }
+
+            .invoice-header {
+                padding-bottom: 10px;
+                margin-bottom: 12px;
+                border-bottom-width: 1px;
+            }
+
+            .store-block,
+            .invoice-title-block {
+                min-width: 0;
+            }
+
+            .store-logo {
+                width: 52px;
+                height: 52px;
+                margin: 0 auto 6px;
+                display: block;
+            }
+
+            h1 {
+                font-size: 18px;
+            }
+
+            h2 {
+                font-size: 16px;
+                margin-top: 8px;
+            }
+
+            h3,
+            .section-title {
+                font-size: 14px;
+                margin: 14px 0 8px;
+            }
+
+            p,
+            th,
+            td,
+            .muted {
+                font-size: 11px;
+                line-height: 1.5;
+            }
+
+            .meta-grid,
+            .summary-grid {
+                grid-template-columns: 1fr;
+                gap: 8px;
+                margin-bottom: 12px;
+            }
+
+            .meta-box,
+            .summary-box,
+            .empty-box {
+                padding: 8px;
+                border-radius: 8px;
+            }
+
+            .meta-box strong,
+            .summary-box strong {
+                margin-top: 4px;
+                font-size: 13px;
+            }
+
+            table {
+                margin-bottom: 12px;
+            }
+
+            th,
+            td {
+                padding: 5px 4px;
+            }
+
+            .items-table th:nth-child(1),
+            .items-table td:nth-child(1) {
+                width: 37%;
+            }
+
+            .items-table th:nth-child(2),
+            .items-table td:nth-child(2) {
+                width: 15%;
+                text-align: center;
+            }
+
+            .items-table th:nth-child(3),
+            .items-table td:nth-child(3),
+            .items-table th:nth-child(4),
+            .items-table td:nth-child(4) {
+                width: 24%;
+            }
+
+            .payments-table th:nth-child(1),
+            .payments-table td:nth-child(1) {
+                width: 40%;
+            }
+
+            .payments-table th:nth-child(2),
+            .payments-table td:nth-child(2) {
+                width: 28%;
+            }
+
+            .payments-table th:nth-child(3),
+            .payments-table td:nth-child(3) {
+                width: 32%;
+            }
+
+            .thermal-only {
+                display: block;
+                margin-top: 10px;
+                text-align: center;
+                font-size: 10px;
             }
         }
     </style>
@@ -279,7 +406,7 @@ if ($selectedSupplierId <= 0 || $selectedInvoiceId <= 0) {
             </div>
 
             <h3 class="section-title">تفاصيل الأصناف</h3>
-            <table>
+            <table class="items-table">
                 <thead>
                     <tr>
                         <th>اسم الصنف</th>
@@ -317,7 +444,7 @@ if ($selectedSupplierId <= 0 || $selectedInvoiceId <= 0) {
 
             <h3 class="section-title">سجل التسديدات</h3>
             <?php if ($selectedInvoicePayments): ?>
-                <table>
+                <table class="payments-table">
                     <thead>
                         <tr>
                             <th>التاريخ والوقت</th>
@@ -338,6 +465,8 @@ if ($selectedSupplierId <= 0 || $selectedInvoiceId <= 0) {
             <?php else: ?>
                 <div class="empty-box">لم يتم تسجيل أي تسديدات على هذه الفاتورة حتى الآن.</div>
             <?php endif; ?>
+
+            <p class="thermal-only">تم تجهيز هذه الفاتورة للطباعة على رول كاشير حراري بعرض 80 مم.</p>
         <?php endif; ?>
     </div>
 </body>
