@@ -118,8 +118,8 @@ document.addEventListener("DOMContentLoaded", function () {
         updateActionsState(false);
 
         mobileActionsMedia.addEventListener("change", function (event) {
-            const isDesktopViewport = !event.matches;
-            updateActionsState(isDesktopViewport);
+            const shouldExpandActions = !event.matches;
+            updateActionsState(shouldExpandActions);
         });
     });
 });
