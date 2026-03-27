@@ -3,7 +3,15 @@ require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/config/db.php';
 require_once __DIR__ . '/includes/functions.php';
 
-$inventoryPageMode = isset($inventoryPageMode) && $inventoryPageMode === 'categories' ? 'categories' : 'inventory';
+if (!defined('INVENTORY_DEFAULT_PAGE')) {
+    define('INVENTORY_DEFAULT_PAGE', 'inventory.php');
+}
+
+if (!defined('INVENTORY_CATEGORIES_PAGE')) {
+    define('INVENTORY_CATEGORIES_PAGE', 'categories.php');
+}
+
+$inventoryPageMode = defined('INVENTORY_PAGE_MODE') && INVENTORY_PAGE_MODE === 'categories' ? 'categories' : 'inventory';
 $isCategoriesPage = $inventoryPageMode === 'categories';
 $activeSidebarLabel = $isCategoriesPage ? 'الأصناف' : 'المخزن';
 
@@ -12,7 +20,7 @@ if (!$isCategoriesPage && $legacyTab === 'issued') {
     $redirectParams = $_GET;
     unset($redirectParams['tab']);
 
-    $redirectUrl = 'categories.php';
+    $redirectUrl = INVENTORY_CATEGORIES_PAGE;
     if ($redirectParams !== []) {
         $redirectUrl .= '?' . http_build_query($redirectParams);
     }
@@ -84,11 +92,10 @@ function normalizeInventoryStatus($quantity, $fallbackStatus = 'متاح')
     return normalizeInventoryAmount($quantity) > 0 ? 'متاح' : 'منتهي';
 }
 
-function buildInventoryPageUrl(array $params = [], $fragment = '', $page = '')
+function buildInventoryRouteUrl($page, array $params = [], $fragment = '')
 {
-    global $isCategoriesPage;
-
-    $url = $page !== '' ? $page : ($isCategoriesPage ? 'categories.php' : 'inventory.php');
+    $allowedPages = [INVENTORY_DEFAULT_PAGE, INVENTORY_CATEGORIES_PAGE];
+    $url = in_array($page, $allowedPages, true) ? $page : INVENTORY_DEFAULT_PAGE;
 
     if ($params !== []) {
         $url .= '?' . http_build_query($params);
@@ -100,6 +107,15 @@ function buildInventoryPageUrl(array $params = [], $fragment = '', $page = '')
     }
 
     return $url;
+}
+
+function buildInventoryPageUrl(array $params = [], $fragment = '')
+{
+    return buildInventoryRouteUrl(
+        defined('INVENTORY_PAGE_MODE') && INVENTORY_PAGE_MODE === 'categories' ? INVENTORY_CATEGORIES_PAGE : INVENTORY_DEFAULT_PAGE,
+        $params,
+        $fragment
+    );
 }
 
 function fetchInventoryItemById(PDO $pdo, $itemId)
@@ -395,9 +411,9 @@ if ($submittedAction === 'issue_inventory_item') {
 
             $pdo->commit();
 
-            header('Location: ' . buildInventoryPageUrl([
+            header('Location: ' . buildInventoryRouteUrl(INVENTORY_CATEGORIES_PAGE, [
                 'success' => 'تم صرف الصنف وتحديث المخزن بنجاح.',
-            ], 'issued-items', 'categories.php'));
+            ], 'issued-items'));
             exit;
         } catch (RuntimeException $exception) {
             if ($pdo->inTransaction()) {
