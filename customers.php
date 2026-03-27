@@ -481,6 +481,7 @@ $saleItemCatalog = fetchSalesItemCatalog($pdo);
 
 $selectedCustomerId = (int) ($_GET['customer_id'] ?? $_POST['customer_id'] ?? 0);
 $selectedInvoiceId = (int) ($_GET['invoice_id'] ?? $_POST['invoice_id'] ?? 0);
+$highlightInvoiceId = (int) ($_GET['highlight_invoice'] ?? 0);
 $legacyView = trim((string) ($_GET['view'] ?? ''));
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && $customerPageMode === 'customers') {
@@ -714,9 +715,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                         $pdo->commit();
 
-                        header('Location: ' . customerInvoiceDetailsPageUrl($selectedCustomerId, $invoiceId, [
-                            'back' => customerInvoicesPageUrl($selectedCustomerId, ['back' => customerListPageUrl()]),
-                            'success' => 'تم حفظ فاتورة العميل بنجاح',
+                        header('Location: ' . customerInvoicesPageUrl($selectedCustomerId, [
+                            'back' => customerListPageUrl(),
+                            'highlight_invoice' => $invoiceId,
+                            'success' => 'تم حفظ فاتورة العميل بنجاح، ويمكنك الآن مراجعتها أو طباعتها',
                         ]));
                         exit;
                     } catch (Throwable $throwable) {
@@ -1445,12 +1447,16 @@ if ($isInvoiceCreatePage) {
                             <?php
                             $invoiceId = (int) $invoice['id'];
                             $invoicePayments = $customerInvoicePaymentsByInvoice[$invoiceId] ?? [];
+                            $isHighlightedInvoice = $highlightInvoiceId > 0 && $invoiceId === $highlightInvoiceId;
                             ?>
-                            <article class="invoice-record-card">
+                            <article class="invoice-record-card<?php echo $isHighlightedInvoice ? ' invoice-record-card-active invoice-record-card-saved' : ''; ?>">
                                 <div class="invoice-record-header">
                                     <div>
                                         <div class="invoice-record-label">فاتورة رقم #<?php echo $invoiceId; ?></div>
                                         <h3>تاريخ الحفظ: <?php echo e(formatDateTimeForDisplay($invoice['created_at'])); ?></h3>
+                                        <?php if ($isHighlightedInvoice): ?>
+                                            <p class="muted-text invoice-record-note">هذه هي الفاتورة التي تم حفظها الآن.</p>
+                                        <?php endif; ?>
                                     </div>
                                     <span class="invoice-status-pill"><?php echo e($invoice['payment_status']); ?></span>
                                 </div>
@@ -1507,7 +1513,8 @@ if ($isInvoiceCreatePage) {
                                         $selectedCustomerId,
                                         $invoiceId,
                                         ['back' => $currentInvoiceListUrl]
-                                    )); ?>">عرض التفاصيل والتسديد</a>
+                                    )); ?>">مراجعة الفاتورة</a>
+                                    <a class="inline-link small-link" href="customer_invoice_print.php?customer_id=<?php echo (int) $selectedCustomerId; ?>&invoice_id=<?php echo (int) $invoiceId; ?>" target="_blank" rel="noopener">🖨️ طباعة الفاتورة</a>
                                 </div>
                             </article>
                         <?php endforeach; ?>

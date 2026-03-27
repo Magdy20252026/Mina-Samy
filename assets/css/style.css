@@ -1142,6 +1142,11 @@ body.dark.dashboard-page .status-item {
     box-shadow: 0 18px 30px rgba(37, 99, 235, 0.14);
 }
 
+.invoice-record-card-saved {
+    border-color: rgba(22, 163, 74, 0.45);
+    box-shadow: 0 18px 30px rgba(22, 163, 74, 0.16);
+}
+
 .invoice-record-header {
     display: flex;
     justify-content: space-between;
@@ -1198,6 +1203,12 @@ body.dark.dashboard-page .status-item {
 .invoice-record-actions {
     display: flex;
     justify-content: flex-start;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.invoice-record-note {
+    color: #15803d;
 }
 
 .small-link {
