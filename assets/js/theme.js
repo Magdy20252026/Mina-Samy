@@ -40,6 +40,7 @@ document.addEventListener("DOMContentLoaded", function () {
         toggleButton.className = "mobile-sidebar-toggle";
         toggleButton.setAttribute("aria-controls", sidebarId);
         toggleIcon.className = "mobile-sidebar-toggle-icon";
+        toggleIcon.setAttribute("aria-hidden", "true");
         toggleButton.appendChild(toggleIcon);
         toggleButton.appendChild(toggleLabel);
 
@@ -89,6 +90,7 @@ document.addEventListener("DOMContentLoaded", function () {
         toggleButton.setAttribute("aria-controls", actionsId);
 
         toggleIcon.className = "mobile-actions-toggle-icon";
+        toggleIcon.setAttribute("aria-hidden", "true");
         toggleButton.appendChild(toggleIcon);
         toggleButton.appendChild(toggleLabel);
 
@@ -114,7 +116,8 @@ document.addEventListener("DOMContentLoaded", function () {
         updateActionsState(false);
 
         mobileActionsMedia.addEventListener("change", function (event) {
-            updateActionsState(!event.matches);
+            const shouldExpandActions = !event.matches;
+            updateActionsState(shouldExpandActions);
         });
     });
 });
