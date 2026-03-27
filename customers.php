@@ -1449,13 +1449,13 @@ if ($isInvoiceCreatePage) {
                             $invoicePayments = $customerInvoicePaymentsByInvoice[$invoiceId] ?? [];
                             $isHighlightedInvoice = $highlightInvoiceId > 0 && $invoiceId === $highlightInvoiceId;
                             ?>
-                            <article class="invoice-record-card"<?php echo $isHighlightedInvoice ? ' style="border: 2px solid #16a34a;"' : ''; ?>>
+                            <article class="invoice-record-card<?php echo $isHighlightedInvoice ? ' invoice-record-card-active invoice-record-card-saved' : ''; ?>">
                                 <div class="invoice-record-header">
                                     <div>
                                         <div class="invoice-record-label">فاتورة رقم #<?php echo $invoiceId; ?></div>
                                         <h3>تاريخ الحفظ: <?php echo e(formatDateTimeForDisplay($invoice['created_at'])); ?></h3>
                                         <?php if ($isHighlightedInvoice): ?>
-                                            <p class="muted-text" style="color: #15803d;">هذه هي الفاتورة التي تم حفظها الآن.</p>
+                                            <p class="muted-text invoice-record-note">هذه هي الفاتورة التي تم حفظها الآن.</p>
                                         <?php endif; ?>
                                     </div>
                                     <span class="invoice-status-pill"><?php echo e($invoice['payment_status']); ?></span>
@@ -1514,7 +1514,7 @@ if ($isInvoiceCreatePage) {
                                         $invoiceId,
                                         ['back' => $currentInvoiceListUrl]
                                     )); ?>">مراجعة الفاتورة</a>
-                                    <a class="inline-link small-link" href="customer_invoice_print.php?customer_id=<?php echo (int) $selectedCustomerId; ?>&invoice_id=<?php echo $invoiceId; ?>" target="_blank" rel="noopener">🖨️ طباعة الفاتورة</a>
+                                    <a class="inline-link small-link" href="customer_invoice_print.php?customer_id=<?php echo (int) $selectedCustomerId; ?>&invoice_id=<?php echo (int) $invoiceId; ?>" target="_blank" rel="noopener">🖨️ طباعة الفاتورة</a>
                                 </div>
                             </article>
                         <?php endforeach; ?>
