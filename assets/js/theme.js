@@ -4,8 +4,11 @@ document.addEventListener("DOMContentLoaded", function () {
     const sidebar = document.querySelector(".sidebar");
     const topbar = document.querySelector(".topbar");
     const mobileSidebarBreakpoint = 900;
+    const mobileActionsBreakpoint = 640;
     const showSidebarLabel = "إظهار لوحة التحكم";
     const hideSidebarLabel = "إخفاء لوحة التحكم";
+    const showActionsLabel = "إظهار الأزرار";
+    const hideActionsLabel = "إخفاء الأزرار";
 
     if (savedTheme === "dark") {
         document.body.classList.add("dark");
@@ -64,4 +67,54 @@ document.addEventListener("DOMContentLoaded", function () {
             updateSidebarState(shouldOpenSidebar);
         });
     }
+
+    const mobileActionsMedia = window.matchMedia("(max-width: " + mobileActionsBreakpoint + "px)");
+    const pageHeaderActionGroups = document.querySelectorAll(".page-header > .table-actions");
+
+    pageHeaderActionGroups.forEach(function (actions, index) {
+        if (!actions.querySelector("a, button, input[type='submit'], input[type='button']")) {
+            return;
+        }
+
+        const toggleButton = document.createElement("button");
+        const toggleIcon = document.createElement("span");
+        const toggleLabel = document.createElement("span");
+        const actionsId = actions.id || "page-header-actions-" + (index + 1);
+
+        actions.id = actionsId;
+        actions.classList.add("page-header-actions-collapsible");
+
+        toggleButton.type = "button";
+        toggleButton.className = "mobile-actions-toggle secondary-button";
+        toggleButton.setAttribute("aria-controls", actionsId);
+
+        toggleIcon.className = "mobile-actions-toggle-icon";
+        toggleButton.appendChild(toggleIcon);
+        toggleButton.appendChild(toggleLabel);
+
+        const updateActionsState = function (isExpanded) {
+            const shouldExpand = mobileActionsMedia.matches ? isExpanded : true;
+
+            actions.classList.toggle("is-expanded", shouldExpand);
+            toggleButton.setAttribute("aria-expanded", shouldExpand ? "true" : "false");
+            toggleButton.setAttribute("aria-label", shouldExpand ? hideActionsLabel : showActionsLabel);
+            toggleIcon.textContent = shouldExpand ? "✖" : "☰";
+            toggleLabel.textContent = shouldExpand ? hideActionsLabel : showActionsLabel;
+        };
+
+        toggleButton.addEventListener("click", function () {
+            if (!mobileActionsMedia.matches) {
+                return;
+            }
+
+            updateActionsState(!actions.classList.contains("is-expanded"));
+        });
+
+        actions.parentNode.insertBefore(toggleButton, actions);
+        updateActionsState(false);
+
+        mobileActionsMedia.addEventListener("change", function (event) {
+            updateActionsState(!event.matches);
+        });
+    });
 });
