@@ -29,7 +29,7 @@ function getSidebarSections()
         ['icon' => '💸', 'label' => 'مصروفات', 'aria_label' => 'قسم المصروفات', 'href' => 'expenses.php'],
         ['icon' => '👔', 'label' => 'موظفين', 'aria_label' => 'قسم الموظفين', 'href' => 'employees.php'],
         ['icon' => '💵', 'label' => 'قبض موظفين', 'aria_label' => 'قسم قبض الموظفين', 'href' => 'employee_payments.php'],
-        ['icon' => '📊', 'label' => 'إحصائيات', 'aria_label' => 'قسم الإحصائيات'],
+        ['icon' => '📊', 'label' => 'إحصائيات', 'aria_label' => 'قسم الإحصائيات', 'href' => 'statistics.php'],
     ];
 }
 
@@ -86,5 +86,76 @@ function formatDateTimeForDisplay($value)
 function formatMoney($value)
 {
     return number_format((float) $value, 2);
+}
+
+function getStatisticsPeriodRange($period, $anchorDate = '')
+{
+    $allowedPeriods = ['daily', 'weekly', 'monthly'];
+    $period = in_array($period, $allowedPeriods, true) ? $period : 'monthly';
+    $timezone = new DateTimeZone('Africa/Cairo');
+
+    try {
+        if (is_string($anchorDate) && preg_match('/^\d{4}-\d{2}-\d{2}$/', trim($anchorDate))) {
+            $anchor = new DateTimeImmutable(trim($anchorDate) . ' 00:00:00', $timezone);
+        } else {
+            $anchor = new DateTimeImmutable('now', $timezone);
+        }
+    } catch (Exception $exception) {
+        $anchor = new DateTimeImmutable('now', $timezone);
+    }
+
+    if ($period === 'daily') {
+        $start = $anchor->setTime(0, 0, 0);
+        $end = $anchor->setTime(23, 59, 59);
+        $previousAnchor = $anchor->modify('-1 day');
+        $nextAnchor = $anchor->modify('+1 day');
+        $label = 'يومي';
+    } elseif ($period === 'weekly') {
+        $dayOfWeek = (int) $anchor->format('w');
+        $daysFromSaturday = $dayOfWeek === 6 ? 0 : $dayOfWeek + 1;
+        $start = $anchor->modify('-' . $daysFromSaturday . ' days')->setTime(0, 0, 0);
+        $end = $start->modify('+6 days')->setTime(23, 59, 59);
+        $previousAnchor = $anchor->modify('-7 days');
+        $nextAnchor = $anchor->modify('+7 days');
+        $label = 'أسبوعي';
+    } else {
+        $start = $anchor->modify('first day of this month')->setTime(0, 0, 0);
+        $end = $anchor->modify('last day of this month')->setTime(23, 59, 59);
+        $previousAnchor = $anchor->modify('-1 month');
+        $nextAnchor = $anchor->modify('+1 month');
+        $label = 'شهري';
+    }
+
+    $current = new DateTimeImmutable('now', $timezone);
+
+    return [
+        'period' => $period,
+        'label' => $label,
+        'anchor_date' => $anchor->format('Y-m-d'),
+        'start' => $start->format('Y-m-d H:i:s'),
+        'end' => $end->format('Y-m-d H:i:s'),
+        'start_date' => $start->format('Y-m-d'),
+        'end_date' => $end->format('Y-m-d'),
+        'previous_anchor_date' => $previousAnchor->format('Y-m-d'),
+        'next_anchor_date' => $nextAnchor->format('Y-m-d'),
+        'is_current_period' => $current >= $start && $current <= $end,
+    ];
+}
+
+function formatStatisticsPeriodLabel(array $range)
+{
+    $startDate = trim((string) ($range['start_date'] ?? ''));
+    $endDate = trim((string) ($range['end_date'] ?? ''));
+    $label = trim((string) ($range['label'] ?? ''));
+
+    if ($startDate === '' || $endDate === '') {
+        return $label !== '' ? $label : 'الفترة المحددة';
+    }
+
+    if ($startDate === $endDate) {
+        return ($label !== '' ? $label . ' - ' : '') . $startDate;
+    }
+
+    return ($label !== '' ? $label . ' - ' : '') . $startDate . ' إلى ' . $endDate;
 }
 ?>
