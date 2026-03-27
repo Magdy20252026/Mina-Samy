@@ -116,8 +116,8 @@ document.addEventListener("DOMContentLoaded", function () {
         updateActionsState(false);
 
         mobileActionsMedia.addEventListener("change", function (event) {
-            const shouldExpandActions = !event.matches;
-            updateActionsState(shouldExpandActions);
+            const isMobileView = event.matches;
+            updateActionsState(!isMobileView);
         });
     });
 });
