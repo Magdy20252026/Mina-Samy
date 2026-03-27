@@ -15,6 +15,11 @@ function statisticsTableExists(PDO $pdo, $tableName)
     return (bool) $stmt->fetchColumn();
 }
 
+function isStatisticsIdentifierSafe($value)
+{
+    return preg_match('/^[A-Za-z0-9_]+$/', (string) $value) === 1;
+}
+
 function fetchStatisticsMetricSum(PDO $pdo, $metricKey, $startDate, $endDate)
 {
     $definitions = [
@@ -56,7 +61,11 @@ function fetchStatisticsMetricSum(PDO $pdo, $metricKey, $startDate, $endDate)
 
     $definition = $definitions[$metricKey];
 
-    if (!statisticsTableExists($pdo, $definition['table'])) {
+    if (
+        !statisticsTableExists($pdo, $definition['table'])
+        || !isStatisticsIdentifierSafe($definition['value_column'])
+        || !isStatisticsIdentifierSafe($definition['date_column'])
+    ) {
         return 0.0;
     }
 
