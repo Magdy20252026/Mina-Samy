@@ -15,20 +15,55 @@ function statisticsTableExists(PDO $pdo, $tableName)
     return (bool) $stmt->fetchColumn();
 }
 
-function fetchStatisticsSum(PDO $pdo, $tableName, $valueColumn, $dateColumn, $startDate, $endDate)
+function fetchStatisticsMetricSum(PDO $pdo, $metricKey, $startDate, $endDate)
 {
-    if (
-        !statisticsTableExists($pdo, $tableName)
-        || !preg_match('/^[A-Za-z0-9_]+$/', (string) $valueColumn)
-        || !preg_match('/^[A-Za-z0-9_]+$/', (string) $dateColumn)
-    ) {
+    $definitions = [
+        'supplier_paid' => [
+            'table' => 'supplier_invoice_payments',
+            'value_column' => 'payment_amount',
+            'date_column' => 'created_at',
+        ],
+        'supplier_remaining' => [
+            'table' => 'supplier_invoices',
+            'value_column' => 'amount_due',
+            'date_column' => 'created_at',
+        ],
+        'expenses' => [
+            'table' => 'expenses',
+            'value_column' => 'amount',
+            'date_column' => 'created_at',
+        ],
+        'employee_salaries' => [
+            'table' => 'employee_salary_payments',
+            'value_column' => 'amount',
+            'date_column' => 'paid_at',
+        ],
+        'sales_paid' => [
+            'table' => 'customer_invoice_payments',
+            'value_column' => 'payment_amount',
+            'date_column' => 'created_at',
+        ],
+        'customer_debt' => [
+            'table' => 'customer_invoices',
+            'value_column' => 'amount_due',
+            'date_column' => 'created_at',
+        ],
+    ];
+
+    if (!isset($definitions[$metricKey])) {
+        return 0.0;
+    }
+
+    $definition = $definitions[$metricKey];
+
+    if (!statisticsTableExists($pdo, $definition['table'])) {
         return 0.0;
     }
 
     $stmt = $pdo->prepare("
-        SELECT COALESCE(SUM($valueColumn), 0) AS total_value
-        FROM $tableName
-        WHERE $dateColumn BETWEEN ? AND ?
+        SELECT COALESCE(SUM({$definition['value_column']}), 0) AS total_value
+        FROM {$definition['table']}
+        WHERE {$definition['date_column']} BETWEEN ? AND ?
     ");
     $stmt->execute([$startDate, $endDate]);
 
@@ -40,51 +75,39 @@ $requestedDate = trim((string) ($_GET['date'] ?? ''));
 $range = getStatisticsPeriodRange($requestedPeriod, $requestedDate);
 $pageTitle = formatStatisticsPeriodLabel($range);
 
-$supplierPaidTotal = fetchStatisticsSum(
+$supplierPaidTotal = fetchStatisticsMetricSum(
     $pdo,
-    'supplier_invoice_payments',
-    'payment_amount',
-    'created_at',
+    'supplier_paid',
     $range['start'],
     $range['end']
 );
-$supplierRemainingTotal = fetchStatisticsSum(
+$supplierRemainingTotal = fetchStatisticsMetricSum(
     $pdo,
-    'supplier_invoices',
-    'amount_due',
-    'created_at',
+    'supplier_remaining',
     $range['start'],
     $range['end']
 );
-$expensesTotal = fetchStatisticsSum(
+$expensesTotal = fetchStatisticsMetricSum(
     $pdo,
     'expenses',
-    'amount',
-    'created_at',
     $range['start'],
     $range['end']
 );
-$employeeSalariesTotal = fetchStatisticsSum(
+$employeeSalariesTotal = fetchStatisticsMetricSum(
     $pdo,
-    'employee_salary_payments',
-    'amount',
-    'paid_at',
+    'employee_salaries',
     $range['start'],
     $range['end']
 );
-$salesPaidTotal = fetchStatisticsSum(
+$salesPaidTotal = fetchStatisticsMetricSum(
     $pdo,
-    'customer_invoice_payments',
-    'payment_amount',
-    'created_at',
+    'sales_paid',
     $range['start'],
     $range['end']
 );
-$customersDebtTotal = fetchStatisticsSum(
+$customersDebtTotal = fetchStatisticsMetricSum(
     $pdo,
-    'customer_invoices',
-    'amount_due',
-    'created_at',
+    'customer_debt',
     $range['start'],
     $range['end']
 );

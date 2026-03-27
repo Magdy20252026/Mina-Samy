@@ -112,7 +112,7 @@ function getStatisticsPeriodRange($period, $anchorDate = '')
         $label = 'يومي';
     } elseif ($period === 'weekly') {
         $dayOfWeek = (int) $anchor->format('w');
-        $daysFromSaturday = ($dayOfWeek + 1) % 7;
+        $daysFromSaturday = $dayOfWeek === 6 ? 0 : $dayOfWeek + 1;
         $start = $anchor->modify('-' . $daysFromSaturday . ' days')->setTime(0, 0, 0);
         $end = $start->modify('+6 days')->setTime(23, 59, 59);
         $previousAnchor = $anchor->modify('-7 days');
