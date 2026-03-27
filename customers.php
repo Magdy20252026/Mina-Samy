@@ -876,7 +876,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $customers = [];
 $totalCustomersBalance = 0.00;
 $unpaidInvoicesCount = 0;
-$customerPhoneLookup = [];
 
 if ($customerPageMode === 'customers') {
     $customersStmt = $pdo->query("
@@ -903,33 +902,6 @@ if ($customerPageMode === 'customers') {
     $customerStats = $customerStatsStmt->fetch(PDO::FETCH_ASSOC);
     $totalCustomersBalance = normalizeAmount($customerStats['total_balance'] ?? 0);
     $unpaidInvoicesCount = (int) ($customerStats['unpaid_invoices_count'] ?? 0);
-}
-
-$customerLookupStmt = $pdo->query("
-    SELECT
-        id,
-        name,
-        phone,
-        COALESCE(balance, 0) AS balance
-    FROM customers
-    WHERE phone <> ''
-    ORDER BY id ASC
-");
-
-foreach ($customerLookupStmt->fetchAll(PDO::FETCH_ASSOC) as $customerRow) {
-    $customerPhone = trim((string) ($customerRow['phone'] ?? ''));
-
-    if ($customerPhone === '' || isset($customerPhoneLookup[$customerPhone])) {
-        continue;
-    }
-
-    $customerBalance = normalizeAmount($customerRow['balance'] ?? 0);
-    $customerPhoneLookup[$customerPhone] = [
-        'id' => (int) ($customerRow['id'] ?? 0),
-        'name' => trim((string) ($customerRow['name'] ?? '')),
-        'balance' => $customerBalance,
-        'balance_label' => formatMoney($customerBalance) . ' ج.م',
-    ];
 }
 
 $selectedCustomer = getCustomerById($pdo, $selectedCustomerId);
@@ -1737,31 +1709,35 @@ if ($isInvoiceCreatePage) {
 <script src="assets/js/theme.js"></script>
 <script>
     const saleItemCatalog = <?php echo json_encode($saleItemCatalog, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
-    const customerPhoneLookup = <?php echo json_encode($customerPhoneLookup, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+    const customerLookupEndpoint = 'customer_lookup.php';
+    const customerLookupCache = Object.create(null);
 
     function parseNumber(value) {
         const parsed = parseFloat(value);
         return Number.isFinite(parsed) ? parsed : 0;
     }
 
-    function syncCustomerLookup(form) {
+    function applyCustomerLookup(form, customer, errorMessage = '') {
         if (!form) {
             return;
         }
 
-        const phoneInput = form.querySelector('[data-customer-phone-input]');
         const nameInput = form.querySelector('[data-customer-name-input]');
         const customerIdInput = form.querySelector('[data-customer-id-input]');
         const statusElement = form.querySelector('[data-customer-lookup-status]');
         const defaultStatusText = statusElement ? (statusElement.dataset.defaultText || '') : '';
-        if (!phoneInput || !nameInput) {
+        if (!nameInput) {
             return;
         }
 
-        const phone = phoneInput.value.trim();
-        const customer = Object.prototype.hasOwnProperty.call(customerPhoneLookup, phone)
-            ? customerPhoneLookup[phone]
-            : null;
+        if (!customer && errorMessage !== '') {
+            if (statusElement) {
+                statusElement.textContent = errorMessage;
+                statusElement.style.color = '#b54708';
+            }
+
+            return;
+        }
 
         if (!customer) {
             if (nameInput.dataset.autoFilled === 'true') {
@@ -1792,9 +1768,78 @@ if ($isInvoiceCreatePage) {
         }
 
         if (statusElement) {
-            statusElement.textContent = `اسم العميل: ${customer.name || ''} — رصيد المديونية: ${customer.balance_label || '0.00 ج.م'}`;
+            statusElement.textContent = `اسم العميل: ${customer.name || ''} — رصيد المديونية: ${customer.balance_label || ''}`;
             statusElement.style.color = parseNumber(customer.balance) > 0 ? '#b42318' : '#027a48';
         }
+    }
+
+    async function fetchCustomerByPhone(phone) {
+        if (phone === '') {
+            return null;
+        }
+
+        if (Object.prototype.hasOwnProperty.call(customerLookupCache, phone)) {
+            return customerLookupCache[phone];
+        }
+
+        const response = await fetch(`${customerLookupEndpoint}?phone=${encodeURIComponent(phone)}`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error('lookup-failed');
+        }
+
+        const payload = await response.json();
+        const customer = payload && payload.success ? (payload.customer || null) : null;
+        customerLookupCache[phone] = customer;
+
+        return customer;
+    }
+
+    function queueCustomerLookup(form, delay = 250) {
+        if (!form) {
+            return;
+        }
+
+        const phoneInput = form.querySelector('[data-customer-phone-input]');
+        if (!phoneInput) {
+            return;
+        }
+
+        const phone = phoneInput.value.trim();
+        form.dataset.lookupRequestId = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+        const requestId = form.dataset.lookupRequestId;
+
+        if (form.customerLookupTimer) {
+            clearTimeout(form.customerLookupTimer);
+        }
+
+        if (phone === '') {
+            applyCustomerLookup(form, null);
+            return;
+        }
+
+        form.customerLookupTimer = setTimeout(async () => {
+            const isLookupOutdated = () => form.dataset.lookupRequestId !== requestId || phoneInput.value.trim() !== phone;
+
+            try {
+                const customer = await fetchCustomerByPhone(phone);
+                if (isLookupOutdated()) {
+                    return;
+                }
+
+                applyCustomerLookup(form, customer);
+            } catch (error) {
+                if (isLookupOutdated()) {
+                    return;
+                }
+
+                applyCustomerLookup(form, null, 'تعذر جلب بيانات العميل حاليًا.');
+            }
+        }, delay);
     }
 
     function toggleFieldGroup(group, isVisible, requiredSelectors = []) {
@@ -1976,10 +2021,10 @@ if ($isInvoiceCreatePage) {
         }
 
         phoneInput.addEventListener('input', () => {
-            syncCustomerLookup(form);
+            queueCustomerLookup(form);
         });
 
-        syncCustomerLookup(form);
+        queueCustomerLookup(form, 0);
     });
 
     if (addItemRowButton && invoiceItems) {
