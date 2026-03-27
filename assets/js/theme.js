@@ -95,6 +95,7 @@ document.addEventListener("DOMContentLoaded", function () {
         toggleButton.appendChild(toggleLabel);
 
         const updateActionsState = function (isExpanded) {
+            // Desktop keeps header actions visible; collapsing is mobile-only.
             const shouldExpand = mobileActionsMedia.matches ? isExpanded : true;
 
             actions.classList.toggle("is-expanded", shouldExpand);
@@ -116,8 +117,8 @@ document.addEventListener("DOMContentLoaded", function () {
         updateActionsState(false);
 
         mobileActionsMedia.addEventListener("change", function (event) {
-            const isMobileView = event.matches;
-            updateActionsState(!isMobileView);
+            const isAtOrBelowMobileBreakpoint = event.matches;
+            updateActionsState(!isAtOrBelowMobileBreakpoint);
         });
     });
 });
