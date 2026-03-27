@@ -71,9 +71,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const mobileActionsMedia = window.matchMedia("(max-width: " + mobileActionsBreakpoint + "px)");
     const pageHeaderActionGroups = document.querySelectorAll(".page-header > .table-actions");
+    const pageHeaderActionSelector = "a, button, input[type='submit'], input[type='button'], input[type='reset'], [role='button']";
 
     pageHeaderActionGroups.forEach(function (actions, index) {
-        if (!actions.querySelector("a, button, input[type='submit'], input[type='button']")) {
+        if (!actions.querySelector(pageHeaderActionSelector)) {
             return;
         }
 
@@ -117,8 +118,8 @@ document.addEventListener("DOMContentLoaded", function () {
         updateActionsState(false);
 
         mobileActionsMedia.addEventListener("change", function (event) {
-            const isAtOrBelowMobileBreakpoint = event.matches;
-            updateActionsState(!isAtOrBelowMobileBreakpoint);
+            const isDesktopViewport = !event.matches;
+            updateActionsState(isDesktopViewport);
         });
     });
 });
