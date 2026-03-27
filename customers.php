@@ -876,6 +876,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $customers = [];
 $totalCustomersBalance = 0.00;
 $unpaidInvoicesCount = 0;
+$customerPhoneLookup = [];
 
 if ($customerPageMode === 'customers') {
     $customersStmt = $pdo->query("
@@ -902,6 +903,33 @@ if ($customerPageMode === 'customers') {
     $customerStats = $customerStatsStmt->fetch(PDO::FETCH_ASSOC);
     $totalCustomersBalance = normalizeAmount($customerStats['total_balance'] ?? 0);
     $unpaidInvoicesCount = (int) ($customerStats['unpaid_invoices_count'] ?? 0);
+}
+
+$customerLookupStmt = $pdo->query("
+    SELECT
+        id,
+        name,
+        phone,
+        COALESCE(balance, 0) AS balance
+    FROM customers
+    WHERE phone <> ''
+    ORDER BY id ASC
+");
+
+foreach ($customerLookupStmt->fetchAll(PDO::FETCH_ASSOC) as $customerRow) {
+    $customerPhone = trim((string) ($customerRow['phone'] ?? ''));
+
+    if ($customerPhone === '' || isset($customerPhoneLookup[$customerPhone])) {
+        continue;
+    }
+
+    $customerBalance = normalizeAmount($customerRow['balance'] ?? 0);
+    $customerPhoneLookup[$customerPhone] = [
+        'id' => (int) ($customerRow['id'] ?? 0),
+        'name' => trim((string) ($customerRow['name'] ?? '')),
+        'balance' => $customerBalance,
+        'balance_label' => formatMoney($customerBalance) . ' ج.م',
+    ];
 }
 
 $selectedCustomer = getCustomerById($pdo, $selectedCustomerId);
@@ -1157,17 +1185,18 @@ if ($isInvoiceCreatePage) {
                         <span class="muted-text">يمكنك أيضًا إنشاء فاتورة بيع مباشرة عبر رقم هاتف العميل من شاشة المبيعات.</span>
                     </div>
 
-                    <form method="POST">
+                    <form method="POST" data-customer-lookup-form>
                         <input type="hidden" name="form_action" value="add_customer">
 
                         <div class="form-group">
                             <label>اسم العميل</label>
-                            <input type="text" name="customer_name" value="<?php echo e($submittedAction === 'add_customer' ? ($_POST['customer_name'] ?? '') : ''); ?>" required>
+                            <input type="text" name="customer_name" value="<?php echo e($submittedAction === 'add_customer' ? ($_POST['customer_name'] ?? '') : ''); ?>" required data-customer-name-input>
                         </div>
 
                         <div class="form-group">
                             <label>رقم التليفون</label>
-                            <input type="text" name="customer_phone" value="<?php echo e($submittedAction === 'add_customer' ? ($_POST['customer_phone'] ?? '') : ''); ?>" required>
+                            <input type="text" name="customer_phone" value="<?php echo e($submittedAction === 'add_customer' ? ($_POST['customer_phone'] ?? '') : ''); ?>" required data-customer-phone-input>
+                            <small class="muted-text" data-customer-lookup-status data-default-text="اكتب رقم التليفون للتحقق من بيانات العميل الحالي.">اكتب رقم التليفون للتحقق من بيانات العميل الحالي.</small>
                         </div>
 
                         <div class="table-actions">
@@ -1287,21 +1316,22 @@ if ($isInvoiceCreatePage) {
                     </div>
                 </div>
 
-                <form method="POST" id="customerInvoiceForm" class="section-stack">
+                <form method="POST" id="customerInvoiceForm" class="section-stack" data-customer-lookup-form>
                     <input type="hidden" name="form_action" value="add_invoice">
-                    <input type="hidden" name="customer_id" value="<?php echo (int) ($selectedCustomer['id'] ?? 0); ?>">
+                    <input type="hidden" name="customer_id" value="<?php echo (int) ($selectedCustomer['id'] ?? 0); ?>" data-customer-id-input>
                     <input type="hidden" name="return_to" value="<?php echo e($invoiceCreateBackUrl); ?>">
 
                     <div class="payment-method-grid">
                         <div class="form-group">
                             <label>رقم هاتف العميل</label>
-                            <input type="text" name="customer_phone" value="<?php echo e($invoiceCustomerPhoneValue); ?>" required>
+                            <input type="text" name="customer_phone" value="<?php echo e($invoiceCustomerPhoneValue); ?>" required data-customer-phone-input>
                             <small class="muted-text">إذا كان العميل مسجلًا سيتم ربط الفاتورة به تلقائيًا.</small>
                         </div>
                         <div class="form-group">
                             <label>اسم العميل</label>
-                            <input type="text" name="customer_name" value="<?php echo e($invoiceCustomerNameValue); ?>">
+                            <input type="text" name="customer_name" value="<?php echo e($invoiceCustomerNameValue); ?>" data-customer-name-input>
                             <small class="muted-text">يصبح مطلوبًا فقط إذا كان العميل جديدًا لأول مرة.</small>
+                            <small class="muted-text" data-customer-lookup-status data-default-text="عند كتابة رقم هاتف عميل مسجل سيتم تعبئة الاسم وإظهار رصيد المديونية الحالي.">عند كتابة رقم هاتف عميل مسجل سيتم تعبئة الاسم وإظهار رصيد المديونية الحالي.</small>
                         </div>
                     </div>
 
@@ -1707,10 +1737,64 @@ if ($isInvoiceCreatePage) {
 <script src="assets/js/theme.js"></script>
 <script>
     const saleItemCatalog = <?php echo json_encode($saleItemCatalog, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+    const customerPhoneLookup = <?php echo json_encode($customerPhoneLookup, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
 
     function parseNumber(value) {
         const parsed = parseFloat(value);
         return Number.isFinite(parsed) ? parsed : 0;
+    }
+
+    function syncCustomerLookup(form) {
+        if (!form) {
+            return;
+        }
+
+        const phoneInput = form.querySelector('[data-customer-phone-input]');
+        const nameInput = form.querySelector('[data-customer-name-input]');
+        const customerIdInput = form.querySelector('[data-customer-id-input]');
+        const statusElement = form.querySelector('[data-customer-lookup-status]');
+        const defaultStatusText = statusElement ? (statusElement.dataset.defaultText || '') : '';
+        if (!phoneInput || !nameInput) {
+            return;
+        }
+
+        const phone = phoneInput.value.trim();
+        const customer = Object.prototype.hasOwnProperty.call(customerPhoneLookup, phone)
+            ? customerPhoneLookup[phone]
+            : null;
+
+        if (!customer) {
+            if (nameInput.dataset.autoFilled === 'true') {
+                nameInput.value = '';
+            }
+
+            nameInput.dataset.autoFilled = 'false';
+            nameInput.readOnly = false;
+
+            if (customerIdInput) {
+                customerIdInput.value = '';
+            }
+
+            if (statusElement) {
+                statusElement.textContent = defaultStatusText;
+                statusElement.style.color = '';
+            }
+
+            return;
+        }
+
+        nameInput.value = customer.name || '';
+        nameInput.dataset.autoFilled = 'true';
+        nameInput.readOnly = true;
+
+        if (customerIdInput) {
+            customerIdInput.value = String(customer.id || '');
+        }
+
+        if (statusElement) {
+            statusElement.textContent = `اسم العميل: ${customer.name || ''} — رصيد المديونية: ${customer.balance_label || '0.00 ج.م'}`;
+            statusElement.style.color = parseNumber(customer.balance) > 0 ? '#b42318' : '#027a48';
+        }
     }
 
     function toggleFieldGroup(group, isVisible, requiredSelectors = []) {
@@ -1885,6 +1969,18 @@ if ($isInvoiceCreatePage) {
 
     const addItemRowButton = document.getElementById('addItemRow');
     const invoiceItems = document.getElementById('invoiceItems');
+    document.querySelectorAll('[data-customer-lookup-form]').forEach((form) => {
+        const phoneInput = form.querySelector('[data-customer-phone-input]');
+        if (!phoneInput) {
+            return;
+        }
+
+        phoneInput.addEventListener('input', () => {
+            syncCustomerLookup(form);
+        });
+
+        syncCustomerLookup(form);
+    });
 
     if (addItemRowButton && invoiceItems) {
         addItemRowButton.addEventListener('click', () => {
