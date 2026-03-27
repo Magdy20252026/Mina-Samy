@@ -3,6 +3,32 @@ require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/config/db.php';
 require_once __DIR__ . '/includes/functions.php';
 
+if (!defined('INVENTORY_DEFAULT_PAGE')) {
+    define('INVENTORY_DEFAULT_PAGE', 'inventory.php');
+}
+
+if (!defined('INVENTORY_CATEGORIES_PAGE')) {
+    define('INVENTORY_CATEGORIES_PAGE', 'categories.php');
+}
+
+$inventoryPageMode = defined('INVENTORY_PAGE_MODE') && INVENTORY_PAGE_MODE === 'categories' ? 'categories' : 'inventory';
+$isCategoriesPage = $inventoryPageMode === 'categories';
+$activeSidebarLabel = $isCategoriesPage ? 'الأصناف' : 'المخزن';
+
+$legacyTab = trim((string) ($_GET['tab'] ?? ''));
+if (!$isCategoriesPage && $legacyTab === 'issued') {
+    $redirectParams = $_GET;
+    unset($redirectParams['tab']);
+
+    $redirectUrl = INVENTORY_CATEGORIES_PAGE;
+    if ($redirectParams !== []) {
+        $redirectUrl .= '?' . http_build_query($redirectParams);
+    }
+
+    header('Location: ' . $redirectUrl . '#issued-items');
+    exit;
+}
+
 $error = '';
 $success = trim((string) ($_GET['success'] ?? ''));
 $submittedAction = trim((string) ($_POST['form_action'] ?? ''));
@@ -66,9 +92,10 @@ function normalizeInventoryStatus($quantity, $fallbackStatus = 'متاح')
     return normalizeInventoryAmount($quantity) > 0 ? 'متاح' : 'منتهي';
 }
 
-function buildInventoryPageUrl(array $params = [], $fragment = '')
+function buildInventoryRouteUrl($page, array $params = [], $fragment = '')
 {
-    $url = 'inventory.php';
+    $allowedPages = [INVENTORY_DEFAULT_PAGE, INVENTORY_CATEGORIES_PAGE];
+    $url = in_array($page, $allowedPages, true) ? $page : INVENTORY_DEFAULT_PAGE;
 
     if ($params !== []) {
         $url .= '?' . http_build_query($params);
@@ -80,6 +107,15 @@ function buildInventoryPageUrl(array $params = [], $fragment = '')
     }
 
     return $url;
+}
+
+function buildInventoryPageUrl(array $params = [], $fragment = '')
+{
+    return buildInventoryRouteUrl(
+        defined('INVENTORY_PAGE_MODE') && INVENTORY_PAGE_MODE === 'categories' ? INVENTORY_CATEGORIES_PAGE : INVENTORY_DEFAULT_PAGE,
+        $params,
+        $fragment
+    );
 }
 
 function fetchInventoryItemById(PDO $pdo, $itemId)
@@ -375,9 +411,8 @@ if ($submittedAction === 'issue_inventory_item') {
 
             $pdo->commit();
 
-            header('Location: ' . buildInventoryPageUrl([
+            header('Location: ' . buildInventoryRouteUrl(INVENTORY_CATEGORIES_PAGE, [
                 'success' => 'تم صرف الصنف وتحديث المخزن بنجاح.',
-                'tab' => 'issued',
             ], 'issued-items'));
             exit;
         } catch (RuntimeException $exception) {
@@ -398,70 +433,98 @@ if ($submittedAction === 'issue_inventory_item') {
 
 $selectedIssueId = (int) ($_GET['issue_id'] ?? $selectedIssueId);
 $selectedEditId = (int) ($_GET['edit_id'] ?? $selectedEditId);
-$selectedInventoryItem = fetchInventoryItemById($pdo, $selectedIssueId);
-$editingInventoryItem = fetchInventoryItemById($pdo, $selectedEditId);
-$inventoryItems = fetchInventoryItems($pdo);
-$issuedItems = fetchIssuedItems($pdo, $issuedSearch);
-$issuedSuggestions = fetchIssuedItemSuggestions($pdo);
-$inventoryStats = $pdo->query("
-    SELECT
-        COUNT(*) AS total_inventory_items,
-        SUM(CASE WHEN status = 'متاح' THEN 1 ELSE 0 END) AS available_inventory_items,
-        SUM(CASE WHEN status = 'منتهي' THEN 1 ELSE 0 END) AS finished_inventory_items
-    FROM inventory_items
-")->fetch(PDO::FETCH_ASSOC) ?: [];
-$issuedStats = $pdo->query("
-    SELECT
-        COUNT(*) AS total_issued_records,
-        COUNT(DISTINCT inventory_item_id) AS total_issued_items
-    FROM issued_items
-")->fetch(PDO::FETCH_ASSOC) ?: [];
-$pageTitle = 'المخزن والأصناف';
-$pageDescription = 'تسجيل الأصناف في المخزن، صرفها، ومتابعة الأصناف المصروفة مع البحث والإحصائيات.';
-$pageChip = '🏬 إدارة المخزن';
-$selectedIssueIsTracked = $selectedInventoryItem && $selectedInventoryItem['quantity'] !== null;
-$issueUnitPriceValue = $submittedAction === 'issue_inventory_item'
-    ? trim((string) ($_POST['issue_unit_price'] ?? ''))
-    : ($selectedInventoryItem['unit_price'] ?? '');
-$issuedQuantityValue = $submittedAction === 'issue_inventory_item' ? trim((string) ($_POST['issued_quantity'] ?? '')) : '';
-$remainingStatusValue = $submittedAction === 'issue_inventory_item'
-    ? trim((string) ($_POST['remaining_status'] ?? 'متبقي'))
-    : 'متبقي';
-$inventoryFormAction = $editingInventoryItem ? 'edit_inventory_item' : 'add_inventory_item';
-$inventoryFormTitle = $editingInventoryItem ? 'تعديل الصنف' : 'تسجيل صنف جديد في المخزن';
-$inventoryFormHint = $editingInventoryItem
-    ? 'يمكن تعديل الباركود أو العدد أو السعر، وإذا تُرك العدد فارغًا سيبقى الصنف بدون عدد.'
-    : 'يمكن الحفظ بدون باركود أو بدون عدد.';
-$inventoryFormButton = $editingInventoryItem ? '💾 حفظ التعديلات' : '💾 حفظ الصنف';
-$inventoryBarcodeValue = $submittedAction === 'edit_inventory_item'
-    ? trim((string) ($_POST['barcode'] ?? ''))
-    : ($editingInventoryItem['barcode'] ?? ($submittedAction === 'add_inventory_item' ? ($_POST['barcode'] ?? '') : ''));
-$inventoryItemNameValue = $submittedAction === 'edit_inventory_item'
-    ? trim((string) ($_POST['item_name'] ?? ''))
-    : ($editingInventoryItem['item_name'] ?? ($submittedAction === 'add_inventory_item' ? ($_POST['item_name'] ?? '') : ''));
-$inventoryQuantityValue = $submittedAction === 'edit_inventory_item'
-    ? trim((string) ($_POST['quantity'] ?? ''))
-    : (($editingInventoryItem && $editingInventoryItem['quantity'] !== null) ? normalizeInventoryAmount($editingInventoryItem['quantity']) : ($submittedAction === 'add_inventory_item' ? ($_POST['quantity'] ?? '') : ''));
-$inventoryQuantityMin = $editingInventoryItem ? '0' : '0.01';
-$inventoryUnitPriceValue = $submittedAction === 'edit_inventory_item'
-    ? trim((string) ($_POST['unit_price'] ?? ''))
-    : (($editingInventoryItem && isset($editingInventoryItem['unit_price'])) ? normalizeInventoryAmount($editingInventoryItem['unit_price']) : ($submittedAction === 'add_inventory_item' ? ($_POST['unit_price'] ?? '') : ''));
-$inventoryStatusValue = $submittedAction === 'edit_inventory_item'
-    ? trim((string) ($_POST['item_status'] ?? 'متاح'))
-    : ($editingInventoryItem['status'] ?? 'متاح');
+$selectedInventoryItem = null;
+$editingInventoryItem = null;
+$inventoryItems = [];
+$issuedItems = [];
+$issuedSuggestions = [];
+$inventoryStats = [];
+$issuedStats = [];
+$selectedIssueIsTracked = false;
+$issueUnitPriceValue = '';
+$issuedQuantityValue = '';
+$remainingStatusValue = 'متبقي';
+$inventoryFormAction = 'add_inventory_item';
+$inventoryFormTitle = 'تسجيل صنف جديد في المخزن';
+$inventoryFormHint = 'يمكن الحفظ بدون باركود أو بدون عدد.';
+$inventoryFormButton = '💾 حفظ الصنف';
+$inventoryBarcodeValue = $submittedAction === 'add_inventory_item' ? ($_POST['barcode'] ?? '') : '';
+$inventoryItemNameValue = $submittedAction === 'add_inventory_item' ? ($_POST['item_name'] ?? '') : '';
+$inventoryQuantityValue = $submittedAction === 'add_inventory_item' ? ($_POST['quantity'] ?? '') : '';
+$inventoryQuantityMin = '0.01';
+$inventoryUnitPriceValue = $submittedAction === 'add_inventory_item' ? ($_POST['unit_price'] ?? '') : '';
+$inventoryStatusValue = 'متاح';
 $inventorySearchIndex = [];
 
-foreach ($issuedSuggestions as $suggestion) {
-    $name = trim((string) ($suggestion['item_name'] ?? ''));
-    $barcode = trim((string) ($suggestion['barcode'] ?? ''));
+if ($isCategoriesPage) {
+    $issuedItems = fetchIssuedItems($pdo, $issuedSearch);
+    $issuedSuggestions = fetchIssuedItemSuggestions($pdo);
+    $issuedStats = $pdo->query("
+        SELECT
+            COUNT(*) AS total_issued_records,
+            COUNT(DISTINCT inventory_item_id) AS total_issued_items
+        FROM issued_items
+    ")->fetch(PDO::FETCH_ASSOC) ?: [];
+    $pageTitle = 'الأصناف';
+    $pageDescription = 'متابعة سجل الأصناف المصروفة والبحث بالاسم أو الباركود.';
+    $pageChip = '📦 إدارة الأصناف';
 
-    if ($name !== '') {
-        $inventorySearchIndex[] = ['value' => $name, 'type' => 'name'];
-    }
+    foreach ($issuedSuggestions as $suggestion) {
+        $name = trim((string) ($suggestion['item_name'] ?? ''));
+        $barcode = trim((string) ($suggestion['barcode'] ?? ''));
 
-    if ($barcode !== '') {
-        $inventorySearchIndex[] = ['value' => $barcode, 'type' => 'barcode'];
+        if ($name !== '') {
+            $inventorySearchIndex[] = ['value' => $name, 'type' => 'name'];
+        }
+
+        if ($barcode !== '') {
+            $inventorySearchIndex[] = ['value' => $barcode, 'type' => 'barcode'];
+        }
     }
+} else {
+    $selectedInventoryItem = fetchInventoryItemById($pdo, $selectedIssueId);
+    $editingInventoryItem = fetchInventoryItemById($pdo, $selectedEditId);
+    $inventoryItems = fetchInventoryItems($pdo);
+    $inventoryStats = $pdo->query("
+        SELECT
+            COUNT(*) AS total_inventory_items,
+            SUM(CASE WHEN status = 'متاح' THEN 1 ELSE 0 END) AS available_inventory_items,
+            SUM(CASE WHEN status = 'منتهي' THEN 1 ELSE 0 END) AS finished_inventory_items
+        FROM inventory_items
+    ")->fetch(PDO::FETCH_ASSOC) ?: [];
+    $pageTitle = 'المخزن';
+    $pageDescription = 'تسجيل الأصناف في المخزن، تعديلها، وصرفها مع متابعة حالة الكميات.';
+    $pageChip = '🏬 إدارة المخزن';
+    $selectedIssueIsTracked = $selectedInventoryItem && $selectedInventoryItem['quantity'] !== null;
+    $issueUnitPriceValue = $submittedAction === 'issue_inventory_item'
+        ? trim((string) ($_POST['issue_unit_price'] ?? ''))
+        : ($selectedInventoryItem['unit_price'] ?? '');
+    $issuedQuantityValue = $submittedAction === 'issue_inventory_item' ? trim((string) ($_POST['issued_quantity'] ?? '')) : '';
+    $remainingStatusValue = $submittedAction === 'issue_inventory_item'
+        ? trim((string) ($_POST['remaining_status'] ?? 'متبقي'))
+        : 'متبقي';
+    $inventoryFormAction = $editingInventoryItem ? 'edit_inventory_item' : 'add_inventory_item';
+    $inventoryFormTitle = $editingInventoryItem ? 'تعديل الصنف' : 'تسجيل صنف جديد في المخزن';
+    $inventoryFormHint = $editingInventoryItem
+        ? 'يمكن تعديل الباركود أو العدد أو السعر، وإذا تُرك العدد فارغًا سيبقى الصنف بدون عدد.'
+        : 'يمكن الحفظ بدون باركود أو بدون عدد.';
+    $inventoryFormButton = $editingInventoryItem ? '💾 حفظ التعديلات' : '💾 حفظ الصنف';
+    $inventoryBarcodeValue = $submittedAction === 'edit_inventory_item'
+        ? trim((string) ($_POST['barcode'] ?? ''))
+        : ($editingInventoryItem['barcode'] ?? ($submittedAction === 'add_inventory_item' ? ($_POST['barcode'] ?? '') : ''));
+    $inventoryItemNameValue = $submittedAction === 'edit_inventory_item'
+        ? trim((string) ($_POST['item_name'] ?? ''))
+        : ($editingInventoryItem['item_name'] ?? ($submittedAction === 'add_inventory_item' ? ($_POST['item_name'] ?? '') : ''));
+    $inventoryQuantityValue = $submittedAction === 'edit_inventory_item'
+        ? trim((string) ($_POST['quantity'] ?? ''))
+        : (($editingInventoryItem && $editingInventoryItem['quantity'] !== null) ? normalizeInventoryAmount($editingInventoryItem['quantity']) : ($submittedAction === 'add_inventory_item' ? ($_POST['quantity'] ?? '') : ''));
+    $inventoryQuantityMin = $editingInventoryItem ? '0' : '0.01';
+    $inventoryUnitPriceValue = $submittedAction === 'edit_inventory_item'
+        ? trim((string) ($_POST['unit_price'] ?? ''))
+        : (($editingInventoryItem && isset($editingInventoryItem['unit_price'])) ? normalizeInventoryAmount($editingInventoryItem['unit_price']) : ($submittedAction === 'add_inventory_item' ? ($_POST['unit_price'] ?? '') : ''));
+    $inventoryStatusValue = $submittedAction === 'edit_inventory_item'
+        ? trim((string) ($_POST['item_status'] ?? 'متاح'))
+        : ($editingInventoryItem['status'] ?? 'متاح');
 }
 ?>
 <!DOCTYPE html>
@@ -517,7 +580,7 @@ foreach ($issuedSuggestions as $suggestion) {
         <nav class="sidebar-nav">
             <a href="dashboard.php"><span class="nav-icon">🏠</span><span class="nav-label">لوحة التحكم</span></a>
             <a href="users.php"><span class="nav-icon">👥</span><span class="nav-label">المستخدمين</span></a>
-            <?php echo renderSidebarSections('المخزن'); ?>
+            <?php echo renderSidebarSections($activeSidebarLabel); ?>
             <?php if (($_SESSION['role'] ?? '') === 'مدير'): ?>
                 <a href="settings.php"><span class="nav-icon">⚙️</span><span class="nav-label">إعدادات المتجر</span></a>
             <?php endif; ?>
@@ -554,26 +617,33 @@ foreach ($issuedSuggestions as $suggestion) {
 
         <section class="inventory-section">
             <div class="invoice-meta-grid">
-                <div class="summary-box">
-                    <p>عدد الأصناف في المخزن</p>
-                    <strong><?php echo (int) ($inventoryStats['total_inventory_items'] ?? 0); ?></strong>
-                </div>
-                <div class="summary-box">
-                    <p>الأصناف المتاحة للصرف</p>
-                    <strong><?php echo (int) ($inventoryStats['available_inventory_items'] ?? 0); ?></strong>
-                </div>
-                <div class="summary-box">
-                    <p>الأصناف المنتهية</p>
-                    <strong><?php echo (int) ($inventoryStats['finished_inventory_items'] ?? 0); ?></strong>
-                </div>
-                <div class="summary-box">
-                    <p>عدد الأصناف المصروفة</p>
-                    <strong><?php echo (int) ($issuedStats['total_issued_items'] ?? 0); ?></strong>
-                </div>
+                <?php if ($isCategoriesPage): ?>
+                    <div class="summary-box">
+                        <p>إجمالي سجلات الأصناف المصروفة</p>
+                        <strong><?php echo (int) ($issuedStats['total_issued_records'] ?? 0); ?></strong>
+                    </div>
+                    <div class="summary-box">
+                        <p>عدد الأصناف المصروفة</p>
+                        <strong><?php echo (int) ($issuedStats['total_issued_items'] ?? 0); ?></strong>
+                    </div>
+                <?php else: ?>
+                    <div class="summary-box">
+                        <p>عدد الأصناف في المخزن</p>
+                        <strong><?php echo (int) ($inventoryStats['total_inventory_items'] ?? 0); ?></strong>
+                    </div>
+                    <div class="summary-box">
+                        <p>الأصناف المتاحة للصرف</p>
+                        <strong><?php echo (int) ($inventoryStats['available_inventory_items'] ?? 0); ?></strong>
+                    </div>
+                    <div class="summary-box">
+                        <p>الأصناف المنتهية</p>
+                        <strong><?php echo (int) ($inventoryStats['finished_inventory_items'] ?? 0); ?></strong>
+                    </div>
+                <?php endif; ?>
             </div>
         </section>
 
-        <?php if ($selectedInventoryItem): ?>
+        <?php if (!$isCategoriesPage && $selectedInventoryItem): ?>
             <section class="inventory-section">
                 <div class="form-card">
                     <div class="page-header">
@@ -640,6 +710,7 @@ foreach ($issuedSuggestions as $suggestion) {
             </section>
         <?php endif; ?>
 
+        <?php if (!$isCategoriesPage): ?>
         <section class="inventory-section" id="inventory-form">
             <div class="supplier-layout">
                 <div class="form-card">
@@ -754,7 +825,9 @@ foreach ($issuedSuggestions as $suggestion) {
                 </div>
             </div>
         </section>
+        <?php endif; ?>
 
+        <?php if ($isCategoriesPage): ?>
         <section class="inventory-section" id="issued-items">
             <div class="table-card">
                 <div class="page-header">
@@ -763,7 +836,6 @@ foreach ($issuedSuggestions as $suggestion) {
                 </div>
 
                 <form method="GET" class="inventory-search-form">
-                    <input type="hidden" name="tab" value="issued">
                     <div class="form-group">
                         <label for="issuedSearchInput">ابحث في الأصناف</label>
                         <input
@@ -822,9 +894,11 @@ foreach ($issuedSuggestions as $suggestion) {
                 <?php endif; ?>
             </div>
         </section>
+        <?php endif; ?>
     </main>
 </div>
 
+<?php if ($isCategoriesPage): ?>
 <script>
     const issuedSearchIndex = <?php echo json_encode($inventorySearchIndex, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
     const issuedSearchInput = document.getElementById('issuedSearchInput');
@@ -865,6 +939,7 @@ foreach ($issuedSuggestions as $suggestion) {
         refreshIssuedSuggestions();
     }
 </script>
+<?php endif; ?>
 <script src="assets/js/theme.js"></script>
 </body>
 </html>

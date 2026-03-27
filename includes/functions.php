@@ -23,7 +23,7 @@ function getSidebarSections()
     return [
         ['icon' => '🚚', 'label' => 'الموردين', 'aria_label' => 'قسم الموردين', 'href' => 'suppliers.php'],
         ['icon' => '🏬', 'label' => 'المخزن', 'aria_label' => 'قسم المخزن', 'href' => 'inventory.php'],
-        ['icon' => '📦', 'label' => 'الأصناف', 'aria_label' => 'قسم الأصناف', 'href' => 'inventory.php?tab=issued#issued-items'],
+        ['icon' => '📦', 'label' => 'الأصناف', 'aria_label' => 'قسم الأصناف', 'href' => 'categories.php'],
         ['icon' => '🛒', 'label' => 'المبيعات', 'aria_label' => 'قسم المبيعات', 'href' => 'customer_invoice_create.php'],
         ['icon' => '🤝', 'label' => 'عملاء', 'aria_label' => 'قسم العملاء', 'href' => 'customers.php'],
         ['icon' => '💸', 'label' => 'مصروفات', 'aria_label' => 'قسم المصروفات', 'href' => 'expenses.php'],
