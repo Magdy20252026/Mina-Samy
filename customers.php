@@ -1157,17 +1157,18 @@ if ($isInvoiceCreatePage) {
                         <span class="muted-text">يمكنك أيضًا إنشاء فاتورة بيع مباشرة عبر رقم هاتف العميل من شاشة المبيعات.</span>
                     </div>
 
-                    <form method="POST">
+                    <form method="POST" data-customer-lookup-form>
                         <input type="hidden" name="form_action" value="add_customer">
 
                         <div class="form-group">
                             <label>اسم العميل</label>
-                            <input type="text" name="customer_name" value="<?php echo e($submittedAction === 'add_customer' ? ($_POST['customer_name'] ?? '') : ''); ?>" required>
+                            <input type="text" name="customer_name" value="<?php echo e($submittedAction === 'add_customer' ? ($_POST['customer_name'] ?? '') : ''); ?>" required data-customer-name-input>
                         </div>
 
                         <div class="form-group">
                             <label>رقم التليفون</label>
-                            <input type="text" name="customer_phone" value="<?php echo e($submittedAction === 'add_customer' ? ($_POST['customer_phone'] ?? '') : ''); ?>" required>
+                            <input type="text" name="customer_phone" value="<?php echo e($submittedAction === 'add_customer' ? ($_POST['customer_phone'] ?? '') : ''); ?>" required data-customer-phone-input>
+                            <small class="muted-text" data-customer-lookup-status data-default-text="اكتب رقم التليفون للتحقق من بيانات العميل الحالي.">اكتب رقم التليفون للتحقق من بيانات العميل الحالي.</small>
                         </div>
 
                         <div class="table-actions">
@@ -1287,21 +1288,22 @@ if ($isInvoiceCreatePage) {
                     </div>
                 </div>
 
-                <form method="POST" id="customerInvoiceForm" class="section-stack">
+                <form method="POST" id="customerInvoiceForm" class="section-stack" data-customer-lookup-form>
                     <input type="hidden" name="form_action" value="add_invoice">
-                    <input type="hidden" name="customer_id" value="<?php echo (int) ($selectedCustomer['id'] ?? 0); ?>">
+                    <input type="hidden" name="customer_id" value="<?php echo (int) ($selectedCustomer['id'] ?? 0); ?>" data-customer-id-input>
                     <input type="hidden" name="return_to" value="<?php echo e($invoiceCreateBackUrl); ?>">
 
                     <div class="payment-method-grid">
                         <div class="form-group">
                             <label>رقم هاتف العميل</label>
-                            <input type="text" name="customer_phone" value="<?php echo e($invoiceCustomerPhoneValue); ?>" required>
+                            <input type="text" name="customer_phone" value="<?php echo e($invoiceCustomerPhoneValue); ?>" required data-customer-phone-input>
                             <small class="muted-text">إذا كان العميل مسجلًا سيتم ربط الفاتورة به تلقائيًا.</small>
                         </div>
                         <div class="form-group">
                             <label>اسم العميل</label>
-                            <input type="text" name="customer_name" value="<?php echo e($invoiceCustomerNameValue); ?>">
+                            <input type="text" name="customer_name" value="<?php echo e($invoiceCustomerNameValue); ?>" data-customer-name-input>
                             <small class="muted-text">يصبح مطلوبًا فقط إذا كان العميل جديدًا لأول مرة.</small>
+                            <small class="muted-text" data-customer-lookup-status data-default-text="عند كتابة رقم هاتف عميل مسجل سيتم تعبئة الاسم وإظهار رصيد المديونية الحالي.">عند كتابة رقم هاتف عميل مسجل سيتم تعبئة الاسم وإظهار رصيد المديونية الحالي.</small>
                         </div>
                     </div>
 
@@ -1707,10 +1709,137 @@ if ($isInvoiceCreatePage) {
 <script src="assets/js/theme.js"></script>
 <script>
     const saleItemCatalog = <?php echo json_encode($saleItemCatalog, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+    const customerLookupEndpoint = 'customer_lookup.php';
+    const customerLookupCache = Object.create(null);
 
     function parseNumber(value) {
         const parsed = parseFloat(value);
         return Number.isFinite(parsed) ? parsed : 0;
+    }
+
+    function applyCustomerLookup(form, customer, errorMessage = '') {
+        if (!form) {
+            return;
+        }
+
+        const nameInput = form.querySelector('[data-customer-name-input]');
+        const customerIdInput = form.querySelector('[data-customer-id-input]');
+        const statusElement = form.querySelector('[data-customer-lookup-status]');
+        const defaultStatusText = statusElement ? (statusElement.dataset.defaultText || '') : '';
+        if (!nameInput) {
+            return;
+        }
+
+        if (!customer && errorMessage !== '') {
+            if (statusElement) {
+                statusElement.textContent = errorMessage;
+                statusElement.style.color = '#b54708';
+            }
+
+            return;
+        }
+
+        if (!customer) {
+            if (nameInput.dataset.autoFilled === 'true') {
+                nameInput.value = '';
+            }
+
+            nameInput.dataset.autoFilled = 'false';
+            nameInput.readOnly = false;
+
+            if (customerIdInput) {
+                customerIdInput.value = '';
+            }
+
+            if (statusElement) {
+                statusElement.textContent = defaultStatusText;
+                statusElement.style.color = '';
+            }
+
+            return;
+        }
+
+        nameInput.value = customer.name || '';
+        nameInput.dataset.autoFilled = 'true';
+        nameInput.readOnly = true;
+
+        if (customerIdInput) {
+            customerIdInput.value = String(customer.id || '');
+        }
+
+        if (statusElement) {
+            statusElement.textContent = `اسم العميل: ${customer.name || ''} — رصيد المديونية: ${customer.balance_label || ''}`;
+            statusElement.style.color = parseNumber(customer.balance) > 0 ? '#b42318' : '#027a48';
+        }
+    }
+
+    async function fetchCustomerByPhone(phone) {
+        if (phone === '') {
+            return null;
+        }
+
+        if (Object.prototype.hasOwnProperty.call(customerLookupCache, phone)) {
+            return customerLookupCache[phone];
+        }
+
+        const response = await fetch(`${customerLookupEndpoint}?phone=${encodeURIComponent(phone)}`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error('lookup-failed');
+        }
+
+        const payload = await response.json();
+        const customer = payload && payload.success ? (payload.customer || null) : null;
+        customerLookupCache[phone] = customer;
+
+        return customer;
+    }
+
+    function queueCustomerLookup(form, delay = 250) {
+        if (!form) {
+            return;
+        }
+
+        const phoneInput = form.querySelector('[data-customer-phone-input]');
+        if (!phoneInput) {
+            return;
+        }
+
+        const phone = phoneInput.value.trim();
+        form.dataset.lookupRequestId = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+        const requestId = form.dataset.lookupRequestId;
+
+        if (form.customerLookupTimer) {
+            clearTimeout(form.customerLookupTimer);
+        }
+
+        if (phone === '') {
+            applyCustomerLookup(form, null);
+            return;
+        }
+
+        form.customerLookupTimer = setTimeout(async () => {
+            const isLookupOutdated = () => form.dataset.lookupRequestId !== requestId || phoneInput.value.trim() !== phone;
+
+            try {
+                const customer = await fetchCustomerByPhone(phone);
+                if (isLookupOutdated()) {
+                    return;
+                }
+
+                applyCustomerLookup(form, customer);
+            } catch (error) {
+                if (isLookupOutdated()) {
+                    return;
+                }
+
+                applyCustomerLookup(form, null, 'تعذر جلب بيانات العميل حاليًا.');
+            }
+        }, delay);
     }
 
     function toggleFieldGroup(group, isVisible, requiredSelectors = []) {
@@ -1885,6 +2014,18 @@ if ($isInvoiceCreatePage) {
 
     const addItemRowButton = document.getElementById('addItemRow');
     const invoiceItems = document.getElementById('invoiceItems');
+    document.querySelectorAll('[data-customer-lookup-form]').forEach((form) => {
+        const phoneInput = form.querySelector('[data-customer-phone-input]');
+        if (!phoneInput) {
+            return;
+        }
+
+        phoneInput.addEventListener('input', () => {
+            queueCustomerLookup(form);
+        });
+
+        queueCustomerLookup(form, 0);
+    });
 
     if (addItemRowButton && invoiceItems) {
         addItemRowButton.addEventListener('click', () => {
